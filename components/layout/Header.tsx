@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { signOutAction } from "@/app/actions/auth";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { ThemeToggle } from "./ThemeToggle";
 import { UserMenu } from "./UserMenu";
 
 interface HeaderProps {
@@ -68,7 +69,10 @@ export function Header({
         </span>
       </div>
 
-      <UserMenu userEmail={userEmail} onSignOut={handleSignOut} />
+      <div className="flex items-center gap-1">
+        <ThemeToggle />
+        <UserMenu userEmail={userEmail} onSignOut={handleSignOut} />
+      </div>
     </header>
   );
 }

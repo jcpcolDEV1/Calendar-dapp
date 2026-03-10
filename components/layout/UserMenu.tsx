@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { LogOut, Moon, Sun, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 
 interface UserMenuProps {
   userEmail?: string | null;
@@ -10,15 +10,7 @@ interface UserMenuProps {
 
 export function UserMenu({ userEmail, onSignOut }: UserMenuProps) {
   const [open, setOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const isDark =
-      typeof window !== "undefined" &&
-      document.documentElement.classList.contains("dark");
-    setDarkMode(isDark);
-  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -29,11 +21,6 @@ export function UserMenu({ userEmail, onSignOut }: UserMenuProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  function toggleDarkMode() {
-    document.documentElement.classList.toggle("dark");
-    setDarkMode((prev) => !prev);
-  }
 
   return (
     <div className="relative" ref={ref}>
@@ -59,22 +46,6 @@ export function UserMenu({ userEmail, onSignOut }: UserMenuProps) {
               {userEmail ?? "User"}
             </p>
           </div>
-          <button
-            onClick={toggleDarkMode}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            {darkMode ? (
-              <>
-                <Sun className="h-4 w-4" />
-                Light mode
-              </>
-            ) : (
-              <>
-                <Moon className="h-4 w-4" />
-                Dark mode
-              </>
-            )}
-          </button>
           <button
             onClick={() => {
               onSignOut();
