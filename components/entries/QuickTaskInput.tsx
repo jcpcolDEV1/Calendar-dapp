@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createEntryAction } from "@/app/actions/entries";
+import { parseTaskInput } from "@/lib/parse-task-input";
 import { toast } from "sonner";
 
 interface QuickTaskInputProps {
@@ -21,7 +22,7 @@ export function QuickTaskInput({
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
-    const title = value.trim();
+    const { title, time } = parseTaskInput(value);
     if (!title || loading) return;
 
     setLoading(true);
@@ -31,7 +32,7 @@ export function QuickTaskInput({
         title,
         entry_type: "task",
         date,
-        time: null,
+        time,
         recurrence_type: "none",
       });
       setValue("");
