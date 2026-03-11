@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { X, Plus } from "lucide-react";
 import type { Entry } from "@/types";
 import { EntryList } from "./EntryList";
+import { QuickTaskInput } from "./QuickTaskInput";
 import { EntryForm, type EntryFormData } from "./EntryForm";
 import { createEntryAction, updateEntryAction } from "@/app/actions/entries";
 import { toast } from "sonner";
@@ -129,20 +130,26 @@ export function DayDetailPanel({
             />
           ) : (
             <>
+              <EntryList
+                entries={entries}
+                onEdit={setEditingEntry}
+                onRefresh={onRefresh}
+              />
+
+              <QuickTaskInput
+                calendarId={calendarId}
+                date={dateStr}
+                onRefresh={onRefresh}
+              />
+
               <button
                 onClick={() => setShowForm(true)}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                 data-testid="day-panel-add-entry"
               >
                 <Plus className="h-4 w-4" />
-                Add entry
+                Añadir con más opciones
               </button>
-
-              <EntryList
-                entries={entries}
-                onEdit={setEditingEntry}
-                onRefresh={onRefresh}
-              />
             </>
           )}
         </div>
