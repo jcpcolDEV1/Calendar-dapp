@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { toast } from "sonner";
 
 export default function UpdatePasswordPage() {
@@ -22,6 +23,7 @@ export default function UpdatePasswordPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setErrorMessage(null);
     if (password !== confirmPassword) {
       setErrorMessage("Las contraseñas no coinciden.");
@@ -41,7 +43,7 @@ export default function UpdatePasswordPage() {
       router.push("/app");
       router.refresh();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Error al actualizar la contraseña";
+      const message = getAuthErrorMessage(err, "update_password");
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -114,7 +116,7 @@ export default function UpdatePasswordPage() {
               className="w-full py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
               data-testid="update-password-submit"
             >
-              {loading ? "Actualizando..." : "Actualizar contraseña"}
+              {loading ? "Actualizando contraseña..." : "Actualizar contraseña"}
             </button>
           </form>
         )}

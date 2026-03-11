@@ -46,6 +46,7 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirectTo", request.nextUrl.pathname);
+    url.searchParams.set("reason", "session_expired");
     const redirectResponse = NextResponse.redirect(url);
     supabaseResponse.cookies.getAll().forEach((cookie) =>
       redirectResponse.cookies.set(cookie.name, cookie.value)
@@ -53,11 +54,20 @@ export async function updateSession(request: NextRequest) {
     return redirectResponse;
   }
 
-  if (
-    (request.nextUrl.pathname === "/login" ||
-      request.nextUrl.pathname === "/signup") &&
-    user
-  ) {
+  if (request.nextUrl.pathname === "/" && user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/app";
+    const redirectResponse = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((cookie) =>
+      redirectResponse.cookies.set(cookie.name, cookie.value)
+    );
+    return redirectResponse;
+  }
+
+  // Redirect authenticated users from auth pages (except /update-password:
+  // users may arrive via recovery link with session from hash exchange)
+  const authRedirectPaths = ["/login", "/signup", "/forgot-password"];
+  if (authRedirectPaths.includes(request.nextUrl.pathname) && user) {
     const url = request.nextUrl.clone();
     url.pathname = "/app";
     const redirectResponse = NextResponse.redirect(url);

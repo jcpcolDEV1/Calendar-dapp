@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { toast } from "sonner";
 
 export default function ForgotPasswordPage() {
@@ -13,6 +14,7 @@ export default function ForgotPasswordPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setSuccessMessage(null);
     setErrorMessage(null);
@@ -28,7 +30,7 @@ export default function ForgotPasswordPage() {
       );
       toast.success("Revisa tu correo");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Error al enviar el enlace";
+      const message = getAuthErrorMessage(err, "forgot_password");
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -83,7 +85,7 @@ export default function ForgotPasswordPage() {
             className="w-full py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
             data-testid="forgot-password-submit"
           >
-            {loading ? "Enviando..." : "Enviar enlace"}
+            {loading ? "Enviando enlace..." : "Enviar enlace"}
           </button>
         </form>
         <p className="text-center mt-4 text-slate-600 dark:text-slate-400 text-sm">

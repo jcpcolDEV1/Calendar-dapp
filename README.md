@@ -119,3 +119,5 @@ supabase/schema.sql        # Database schema
 - **Protected routes**: Middleware redirects unauthenticated users from `/app/*`
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
+
+---

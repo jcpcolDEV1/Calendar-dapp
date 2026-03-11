@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { toast } from "sonner";
 
 /** Only allow internal paths to prevent open redirects */
@@ -19,24 +20,27 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = getSafeRedirectTo(searchParams.get("redirectTo"));
+  const sessionExpired = searchParams.get("reason") === "session_expired";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showSessionExpiredBanner, setShowSessionExpiredBanner] = useState(sessionExpired);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setErrorMessage(null);
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      toast.success("Welcome back!");
+      toast.success("¡Bienvenido!");
       router.push(redirectTo);
       router.refresh();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Login failed";
+      const message = getAuthErrorMessage(err, "login");
       setErrorMessage(message);
       toast.error(message);
     } finally {
@@ -48,8 +52,24 @@ function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 px-4">
       <div className="w-full max-w-md">
         <h1 className="text-2xl font-bold text-center mb-6 text-slate-900 dark:text-white">
-          Log in
+          Iniciar sesión
         </h1>
+        {showSessionExpiredBanner && (
+          <div
+            className="mb-4 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm flex items-center justify-between gap-2"
+            role="status"
+          >
+            <span>Tu sesión ha expirado. Inicia sesión de nuevo.</span>
+            <button
+              type="button"
+              onClick={() => setShowSessionExpiredBanner(false)}
+              className="shrink-0 p-1 rounded hover:bg-amber-100 dark:hover:bg-amber-800/50"
+              aria-label="Cerrar"
+            >
+              ×
+            </button>
+          </div>
+        )}
         {errorMessage && (
           <div
             className="mb-4 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 text-sm"
@@ -106,13 +126,13 @@ function LoginForm() {
             className="w-full py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
             data-testid="login-submit"
           >
-            {loading ? "Signing in..." : "Log in"}
+            {loading ? "Iniciando sesión..." : "Iniciar sesión"}
           </button>
         </form>
         <p className="text-center mt-4 text-slate-600 dark:text-slate-400 text-sm">
-          Don&apos;t have an account?{" "}
+          ¿No tienes cuenta?{" "}
           <Link href="/signup" className="text-blue-600 hover:underline">
-            Sign up
+            Crear cuenta
           </Link>
         </p>
       </div>

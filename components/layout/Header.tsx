@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { signOutAction } from "@/app/actions/auth";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
@@ -21,12 +20,8 @@ export function Header({
   onToday,
   userEmail,
 }: HeaderProps) {
-  const router = useRouter();
-
   async function handleSignOut() {
     await signOutAction();
-    router.push("/");
-    router.refresh();
   }
 
   const monthYear = currentMonth.toLocaleDateString("en-US", {
