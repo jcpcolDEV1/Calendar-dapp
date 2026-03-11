@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { format } from "date-fns";
 import { Check, FileText, Pencil, Trash2 } from "lucide-react";
 import type { Entry } from "@/types";
@@ -13,6 +14,18 @@ interface EntryCardProps {
 }
 
 export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(entry.title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      setEditValue(entry.title);
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
+  }, [isEditing, entry.title]);
+
   async function handleToggleComplete() {
     try {
       await updateEntryAction(entry.id, { is_completed: !entry.is_completed });
@@ -32,6 +45,28 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
     } catch {
       toast.error("Failed to delete");
     }
+  }
+
+  async function handleInlineSave() {
+    const trimmed = editValue.trim();
+    if (!trimmed || trimmed === entry.title) {
+      setIsEditing(false);
+      setEditValue(entry.title);
+      return;
+    }
+    try {
+      await updateEntryAction(entry.id, { title: trimmed });
+      toast.success("Tarea actualizada");
+      setIsEditing(false);
+      onRefresh();
+    } catch {
+      toast.error("Error al actualizar");
+    }
+  }
+
+  function handleInlineCancel() {
+    setIsEditing(false);
+    setEditValue(entry.title);
   }
 
   const borderColor = entry.color || "transparent";
@@ -70,18 +105,48 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
       )}
 
       <div className="flex-1 min-w-0">
-        <h4
-          className={`font-medium text-slate-900 dark:text-white ${
-            entry.is_completed ? "line-through text-slate-500" : ""
-          }`}
-        >
-          {entry.title}
-        </h4>
-        {entry.description && (
+        {isEditing ? (
+          <div
+            className="entry-card-inline-edit space-y-1"
+            data-testid="entry-card-inline-edit"
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleInlineSave();
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  handleInlineCancel();
+                }
+              }}
+              onBlur={handleInlineSave}
+              className="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium"
+              data-testid="entry-card-inline-input"
+            />
+          </div>
+        ) : (
+          <h4
+            onClick={() => setIsEditing(true)}
+            className={`font-medium text-slate-900 dark:text-white cursor-text select-text ${
+              entry.is_completed ? "line-through text-slate-500" : ""
+            }`}
+            data-testid="entry-card-title"
+          >
+            {entry.title}
+          </h4>
+        )}
+        {!isEditing && entry.description && (
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5 line-clamp-2">
             {entry.description}
           </p>
         )}
+        {!isEditing && (
         <div className="flex flex-wrap gap-2 mt-1">
           {entry.time && (
             <span className="text-xs text-slate-500">
@@ -108,9 +173,10 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
             </span>
           )}
         </div>
+        )}
       </div>
 
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className={`flex gap-1 transition-opacity ${isEditing ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
         <button
           onClick={() => onEdit(entry)}
           className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700"

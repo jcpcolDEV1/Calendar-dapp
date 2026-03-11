@@ -8,8 +8,8 @@ import {
   addDays,
   format,
   isSameMonth,
-  isSameDay,
   isToday,
+  isSameWeek,
 } from "date-fns";
 import { DayCell } from "./DayCell";
 import type { Entry } from "@/types";
@@ -57,6 +57,9 @@ export function CalendarGrid({
           const entries = entriesByDate[dateKey] ?? [];
           const isCurrentMonth = isSameMonth(date, currentMonth);
           const isCurrentDay = isToday(date);
+          const isCurrentWeek = isSameWeek(date, new Date(), {
+            weekStartsOn: 0,
+          });
 
           return (
             <DayCell
@@ -65,6 +68,7 @@ export function CalendarGrid({
               entries={entries}
               isCurrentMonth={isCurrentMonth}
               isToday={isCurrentDay}
+              isCurrentWeek={isCurrentWeek}
               onClick={() => onDayClick(date)}
             />
           );

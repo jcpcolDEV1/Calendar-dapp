@@ -9,7 +9,19 @@ interface DayCellProps {
   entries: Entry[];
   isCurrentMonth: boolean;
   isToday: boolean;
+  isCurrentWeek: boolean;
   onClick: () => void;
+}
+
+function sortTasksForPreview(tasks: Entry[]): Entry[] {
+  return [...tasks].sort((a, b) => {
+    const aTime = a.time ?? "";
+    const bTime = b.time ?? "";
+    if (aTime && bTime) return aTime.localeCompare(bTime);
+    if (aTime) return -1;
+    if (bTime) return 1;
+    return 0;
+  });
 }
 
 export function DayCell({
@@ -17,12 +29,13 @@ export function DayCell({
   entries,
   isCurrentMonth,
   isToday,
+  isCurrentWeek,
   onClick,
 }: DayCellProps) {
   const tasks = entries.filter((e) => e.entry_type === "task");
-  const notes = entries.filter((e) => e.entry_type === "note");
-  const completedTasks = tasks.filter((e) => e.is_completed).length;
-  const pendingTasks = tasks.length - completedTasks;
+  const sortedTasks = sortTasksForPreview(tasks);
+  const previewTasks = sortedTasks.slice(0, 3);
+  const remainingCount = sortedTasks.length - 3;
 
   const dateKey = format(date, "yyyy-MM-dd");
 
@@ -36,6 +49,8 @@ export function DayCell({
         hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-inset
         ${!isCurrentMonth ? "bg-slate-50/50 dark:bg-slate-900/50 text-slate-400" : ""}
+        ${isCurrentMonth && isCurrentWeek && !isToday ? "bg-blue-50/30 dark:bg-blue-900/10" : ""}
+        ${isToday ? "bg-blue-50 dark:bg-blue-900/20" : ""}
       `}
     >
       <span
@@ -48,25 +63,30 @@ export function DayCell({
         {format(date, "d")}
       </span>
 
-      {entries.length > 0 && (
-        <div className="mt-1 flex flex-wrap gap-0.5">
-          {pendingTasks > 0 && (
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500"
-              title={`${pendingTasks} task(s)`}
-            />
-          )}
-          {completedTasks > 0 && (
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"
-              title={`${completedTasks} completed`}
-            />
-          )}
-          {notes.length > 0 && (
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500"
-              title={`${notes.length} note(s)`}
-            />
+      {previewTasks.length > 0 && (
+        <div className="mt-1 space-y-0.5">
+          {previewTasks.map((task) => (
+            <div
+              key={task.id}
+              className="text-xs text-slate-600 dark:text-slate-400 truncate"
+              title={task.title}
+            >
+              {task.time ? (
+                <>
+                  <span className="text-slate-500 dark:text-slate-500">
+                    {task.time.slice(0, 5)}
+                  </span>{" "}
+                  {task.title}
+                </>
+              ) : (
+                <>• {task.title}</>
+              )}
+            </div>
+          ))}
+          {remainingCount > 0 && (
+            <div className="text-xs text-slate-500 dark:text-slate-500">
+              +{remainingCount} more
+            </div>
           )}
         </div>
       )}
