@@ -89,9 +89,14 @@ export function DayDetailPanel({
   const dateStr = format(date, "yyyy-MM-dd");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+    <div className="fixed inset-0 z-50 flex justify-end">
       <div
-        className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col"
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div
+        className="relative w-full max-w-md sm:max-w-lg h-full bg-white dark:bg-slate-900 shadow-xl flex flex-col animate-slide-in-right"
         role="dialog"
         aria-modal="true"
         aria-labelledby="day-panel-title"
