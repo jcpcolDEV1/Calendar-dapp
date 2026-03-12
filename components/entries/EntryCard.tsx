@@ -13,6 +13,12 @@ function toHHMM(t: string | null): string {
   return t.trim().slice(0, 5);
 }
 
+/** Returns true if end is invalid (earlier than or equal to start when both exist) */
+function isEndTimeInvalid(start: string, end: string): boolean {
+  if (!start || !end) return false;
+  return end <= start;
+}
+
 interface EntryCardProps {
   entry: Entry;
   onEdit: (entry: Entry) => void;
@@ -24,6 +30,7 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
   const [editValue, setEditValue] = useState(entry.title);
   const [editTime, setEditTime] = useState(toHHMM(entry.time));
   const [editEndTime, setEditEndTime] = useState(toHHMM(entry.end_time ?? null));
+  const [timeError, setTimeError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -31,6 +38,7 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
       setEditValue(entry.title);
       setEditTime(toHHMM(entry.time));
       setEditEndTime(toHHMM(entry.end_time ?? null));
+      setTimeError(null);
       inputRef.current?.focus();
       inputRef.current?.select();
     }
@@ -64,10 +72,18 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
       setEditValue(entry.title);
       setEditTime(toHHMM(entry.time));
       setEditEndTime(toHHMM(entry.end_time ?? null));
+      setTimeError(null);
       return;
     }
     const newTime = editTime.trim() || null;
     const newEndTime = editEndTime.trim() || null;
+
+    if (newEndTime && newTime && isEndTimeInvalid(newTime, newEndTime)) {
+      setTimeError("La hora de fin debe ser posterior a la de inicio");
+      return;
+    }
+    setTimeError(null);
+
     const titleChanged = trimmed !== entry.title;
     const timeChanged = newTime !== toHHMM(entry.time);
     const endTimeChanged = newEndTime !== toHHMM(entry.end_time ?? null);
@@ -94,6 +110,7 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
     setEditValue(entry.title);
     setEditTime(toHHMM(entry.time));
     setEditEndTime(toHHMM(entry.end_time ?? null));
+    setTimeError(null);
   }
 
   const borderColor = entry.color || "transparent";
@@ -156,44 +173,68 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
               className="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium"
               data-testid="entry-card-inline-input"
             />
-            <div className="flex items-center gap-2">
-              <input
-                type="time"
-                value={editTime}
-                onChange={(e) => setEditTime(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleInlineSave();
-                  }
-                  if (e.key === "Escape") {
-                    e.preventDefault();
-                    handleInlineCancel();
-                  }
-                }}
-                onBlur={handleInlineSave}
-                className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                data-testid="entry-card-time-input"
-              />
-              <span className="text-slate-400 text-sm">–</span>
-              <input
-                type="time"
-                value={editEndTime}
-                onChange={(e) => setEditEndTime(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleInlineSave();
-                  }
-                  if (e.key === "Escape") {
-                    e.preventDefault();
-                    handleInlineCancel();
-                  }
-                }}
-                onBlur={handleInlineSave}
-                className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                data-testid="entry-card-end-time-input"
-              />
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <input
+                  type="time"
+                  value={editTime}
+                  onChange={(e) => {
+                    setEditTime(e.target.value);
+                    setTimeError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleInlineSave();
+                    }
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      handleInlineCancel();
+                    }
+                  }}
+                  onBlur={handleInlineSave}
+                  className={`px-2 py-1 rounded border text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    timeError
+                      ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/20"
+                      : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800"
+                  } text-slate-900 dark:text-white`}
+                  data-testid="entry-card-time-input"
+                />
+                <span className="text-slate-400 text-sm">–</span>
+                <input
+                  type="time"
+                  value={editEndTime}
+                  onChange={(e) => {
+                    setEditEndTime(e.target.value);
+                    setTimeError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleInlineSave();
+                    }
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      handleInlineCancel();
+                    }
+                  }}
+                  onBlur={handleInlineSave}
+                  className={`px-2 py-1 rounded border text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    timeError
+                      ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/20"
+                      : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800"
+                  } text-slate-900 dark:text-white`}
+                  data-testid="entry-card-end-time-input"
+                />
+              </div>
+              {timeError && (
+                <p
+                  className="text-xs text-red-600 dark:text-red-400"
+                  data-testid="entry-card-time-error"
+                >
+                  {timeError}
+                </p>
+              )}
             </div>
           </div>
         ) : (

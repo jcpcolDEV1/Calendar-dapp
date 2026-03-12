@@ -8,7 +8,7 @@ export default defineConfig({
   workers: 1,
   reporter: "html",
   use: {
-    baseURL: "http://localhost:3001",
+    baseURL: "http://localhost:3002",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "on-first-retry",
@@ -23,8 +23,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npx next dev -p 3001",
-    url: "http://localhost:3001",
+    command: "npx next dev -p 3002",
+    url: "http://localhost:3002",
     reuseExistingServer: true,
     timeout: 180000,
   },

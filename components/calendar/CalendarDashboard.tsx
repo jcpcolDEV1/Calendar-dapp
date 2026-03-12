@@ -188,10 +188,7 @@ export function CalendarDashboard({
           entries={loadingDay ? [] : dayEntries}
           openWithNewEntry={openWithNewEntry}
           onClose={handleClosePanel}
-          onRefresh={() => {
-            refreshData();
-            handleDayClick(selectedDate);
-          }}
+          onRefresh={() => handleDayClick(selectedDate)}
         />
       )}
     </div>
