@@ -5,7 +5,13 @@ import { format } from "date-fns";
 import { Check, FileText, Pencil, Trash2 } from "lucide-react";
 import type { Entry } from "@/types";
 import { updateEntryAction, deleteEntryAction } from "@/app/actions/entries";
+import { formatEntryDisplay } from "@/lib/format-entry-display";
 import { toast } from "sonner";
+
+function toHHMM(t: string | null): string {
+  if (!t) return "";
+  return t.trim().slice(0, 5);
+}
 
 interface EntryCardProps {
   entry: Entry;
@@ -16,15 +22,19 @@ interface EntryCardProps {
 export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(entry.title);
+  const [editTime, setEditTime] = useState(toHHMM(entry.time));
+  const [editEndTime, setEditEndTime] = useState(toHHMM(entry.end_time ?? null));
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isEditing) {
       setEditValue(entry.title);
+      setEditTime(toHHMM(entry.time));
+      setEditEndTime(toHHMM(entry.end_time ?? null));
       inputRef.current?.focus();
       inputRef.current?.select();
     }
-  }, [isEditing, entry.title]);
+  }, [isEditing, entry.title, entry.time, entry.end_time]);
 
   async function handleToggleComplete() {
     try {
@@ -49,13 +59,28 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
 
   async function handleInlineSave() {
     const trimmed = editValue.trim();
-    if (!trimmed || trimmed === entry.title) {
+    if (!trimmed) {
       setIsEditing(false);
       setEditValue(entry.title);
+      setEditTime(toHHMM(entry.time));
+      setEditEndTime(toHHMM(entry.end_time ?? null));
+      return;
+    }
+    const newTime = editTime.trim() || null;
+    const newEndTime = editEndTime.trim() || null;
+    const titleChanged = trimmed !== entry.title;
+    const timeChanged = newTime !== toHHMM(entry.time);
+    const endTimeChanged = newEndTime !== toHHMM(entry.end_time ?? null);
+    if (!titleChanged && !timeChanged && !endTimeChanged) {
+      setIsEditing(false);
       return;
     }
     try {
-      await updateEntryAction(entry.id, { title: trimmed });
+      await updateEntryAction(entry.id, {
+        title: trimmed,
+        time: newTime,
+        end_time: newEndTime,
+      });
       toast.success("Tarea actualizada");
       setIsEditing(false);
       onRefresh();
@@ -67,6 +92,8 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
   function handleInlineCancel() {
     setIsEditing(false);
     setEditValue(entry.title);
+    setEditTime(toHHMM(entry.time));
+    setEditEndTime(toHHMM(entry.end_time ?? null));
   }
 
   const borderColor = entry.color || "transparent";
@@ -107,7 +134,7 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
       <div className="flex-1 min-w-0">
         {isEditing ? (
           <div
-            className="entry-card-inline-edit space-y-1"
+            className="entry-card-inline-edit space-y-2"
             data-testid="entry-card-inline-edit"
           >
             <input
@@ -129,6 +156,45 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
               className="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium"
               data-testid="entry-card-inline-input"
             />
+            <div className="flex items-center gap-2">
+              <input
+                type="time"
+                value={editTime}
+                onChange={(e) => setEditTime(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleInlineSave();
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    handleInlineCancel();
+                  }
+                }}
+                onBlur={handleInlineSave}
+                className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                data-testid="entry-card-time-input"
+              />
+              <span className="text-slate-400 text-sm">–</span>
+              <input
+                type="time"
+                value={editEndTime}
+                onChange={(e) => setEditEndTime(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleInlineSave();
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    handleInlineCancel();
+                  }
+                }}
+                onBlur={handleInlineSave}
+                className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                data-testid="entry-card-end-time-input"
+              />
+            </div>
           </div>
         ) : (
           <h4
@@ -138,7 +204,7 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
             }`}
             data-testid="entry-card-title"
           >
-            {entry.title}
+            {formatEntryDisplay(entry)}
           </h4>
         )}
         {!isEditing && entry.description && (
@@ -148,11 +214,6 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
         )}
         {!isEditing && (
         <div className="flex flex-wrap gap-2 mt-1">
-          {entry.time && (
-            <span className="text-xs text-slate-500">
-              {entry.time.slice(0, 5)}
-            </span>
-          )}
           {entry.priority !== "medium" && (
             <span
               className={`text-xs px-1.5 py-0.5 rounded ${

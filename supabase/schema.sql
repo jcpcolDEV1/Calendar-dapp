@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS public.entries (
   entry_type TEXT NOT NULL CHECK (entry_type IN ('note', 'task')),
   date DATE NOT NULL,
   time TIME,
+  end_time TIME,
   reminder_at TIMESTAMPTZ,
   priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
   label TEXT DEFAULT '',

@@ -3,6 +3,7 @@
 import { format } from "date-fns";
 
 import type { Entry } from "@/types";
+import { formatEntryDisplay } from "@/lib/format-entry-display";
 
 interface DayCellProps {
   date: Date;
@@ -71,16 +72,7 @@ export function DayCell({
               className="text-xs text-slate-600 dark:text-slate-400 truncate"
               title={task.title}
             >
-              {task.time ? (
-                <>
-                  <span className="text-slate-500 dark:text-slate-500">
-                    {task.time.slice(0, 5)}
-                  </span>{" "}
-                  {task.title}
-                </>
-              ) : (
-                <>• {task.title}</>
-              )}
+              {formatEntryDisplay(task)}
             </div>
           ))}
           {remainingCount > 0 && (

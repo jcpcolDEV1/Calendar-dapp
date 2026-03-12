@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createEntryAction } from "@/app/actions/entries";
 import { parseTaskInput } from "@/lib/parse-task-input";
 import { toast } from "sonner";
@@ -20,6 +20,11 @@ export function QuickTaskInput({
 }: QuickTaskInputProps) {
   const [value, setValue] = useState("");
   const [loading, setLoading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, []);
 
   async function handleSubmit() {
     const { title, time } = parseTaskInput(value);
@@ -42,6 +47,7 @@ export function QuickTaskInput({
       toast.error(err instanceof Error ? err.message : "Error al crear");
     } finally {
       setLoading(false);
+      requestAnimationFrame(() => inputRef.current?.focus());
     }
   }
 
@@ -54,6 +60,7 @@ export function QuickTaskInput({
 
   return (
     <input
+      ref={inputRef}
       type="text"
       value={value}
       onChange={(e) => setValue(e.target.value)}

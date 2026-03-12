@@ -20,6 +20,7 @@ export interface Entry {
   entry_type: EntryType;
   date: string;
   time: string | null;
+  end_time: string | null;
   reminder_at: string | null;
   priority: Priority;
   label: string;
@@ -38,6 +39,7 @@ export interface EntryInsert {
   entry_type: EntryType;
   date: string;
   time?: string | null;
+  end_time?: string | null;
   reminder_at?: string | null;
   priority?: Priority;
   label?: string;
@@ -52,6 +54,7 @@ export interface EntryUpdate {
   entry_type?: EntryType;
   date?: string;
   time?: string | null;
+  end_time?: string | null;
   reminder_at?: string | null;
   priority?: Priority;
   label?: string;
