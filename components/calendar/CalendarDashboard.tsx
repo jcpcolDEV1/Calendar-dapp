@@ -11,6 +11,7 @@ import {
 } from "date-fns";
 import type { Calendar, Entry, EntryType, Priority } from "@/types";
 import { Header } from "@/components/layout/Header";
+import { ServiceWorkerRegistration } from "@/components/notifications/ServiceWorkerRegistration";
 import { CalendarGrid } from "./CalendarGrid";
 import { DayDetailPanel } from "@/components/entries/DayDetailPanel";
 import { UpcomingTasks } from "@/components/sidebar/UpcomingTasks";
@@ -137,6 +138,7 @@ export function CalendarDashboard({
 
   return (
     <div className="flex h-screen flex-col bg-slate-50 dark:bg-slate-950">
+      <ServiceWorkerRegistration />
       <Header
         currentMonth={currentMonth}
         onPrevMonth={() => setCurrentMonth((m) => subMonths(m, 1))}

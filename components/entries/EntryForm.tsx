@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Entry, EntryType, Priority } from "@/types";
 import { ENTRY_TYPES, PRIORITIES, COLOR_OPTIONS } from "@/lib/constants";
-import { format } from "date-fns";
+import { REMINDER_OPTIONS } from "@/lib/reminder-utils";
 
 interface EntryFormProps {
   date: string;
@@ -19,7 +19,7 @@ export interface EntryFormData {
   entry_type: EntryType;
   date: string;
   time: string | null;
-  reminder_at: string | null;
+  reminder_offset_minutes: number | null;
   priority: Priority;
   label: string;
   color: string;
@@ -40,10 +40,8 @@ export function EntryForm({
   const [time, setTime] = useState(
     entry?.time ? entry.time.slice(0, 5) : ""
   );
-  const [reminderAt, setReminderAt] = useState(
-    entry?.reminder_at
-      ? format(new Date(entry.reminder_at), "yyyy-MM-dd'T'HH:mm")
-      : ""
+  const [reminderOffset, setReminderOffset] = useState<number | null>(
+    entry?.reminder_offset_minutes ?? null
   );
   const [priority, setPriority] = useState<Priority>(entry?.priority ?? "medium");
   const [label, setLabel] = useState(entry?.label ?? "");
@@ -62,7 +60,10 @@ export function EntryForm({
         entry_type: entryType,
         date: formDate,
         time: time || null,
-        reminder_at: reminderAt ? new Date(reminderAt).toISOString() : null,
+        reminder_offset_minutes:
+          time && reminderOffset != null && reminderOffset > 0
+            ? reminderOffset
+            : null,
         priority,
         label: label.trim(),
         color: color || "",
@@ -150,12 +151,26 @@ export function EntryForm({
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
           Reminder (optional)
         </label>
-        <input
-          type="datetime-local"
-          value={reminderAt}
-          onChange={(e) => setReminderAt(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-        />
+        {time ? (
+          <select
+            value={reminderOffset ?? ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              setReminderOffset(v ? Number(v) : null);
+            }}
+            className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+          >
+            {REMINDER_OPTIONS.map((opt) => (
+              <option key={opt.value ?? "none"} value={opt.value ?? ""}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Los recordatorios requieren hora
+          </p>
+        )}
       </div>
 
       <div>

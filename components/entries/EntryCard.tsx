@@ -2,10 +2,14 @@
 
 import { useState, useRef, useEffect } from "react";
 import { format } from "date-fns";
-import { Check, FileText, Pencil, Trash2 } from "lucide-react";
+import { Bell, Check, FileText, Pencil, Trash2 } from "lucide-react";
 import type { Entry } from "@/types";
 import { updateEntryAction, deleteEntryAction } from "@/app/actions/entries";
 import { formatEntryDisplay } from "@/lib/format-entry-display";
+import {
+  REMINDER_OPTIONS,
+  formatReminderOffset,
+} from "@/lib/reminder-utils";
 import { toast } from "sonner";
 
 function toHHMM(t: string | null): string {
@@ -30,6 +34,9 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
   const [editValue, setEditValue] = useState(entry.title);
   const [editTime, setEditTime] = useState(toHHMM(entry.time));
   const [editEndTime, setEditEndTime] = useState(toHHMM(entry.end_time ?? null));
+  const [editReminderOffset, setEditReminderOffset] = useState<number | null>(
+    entry.reminder_offset_minutes ?? null
+  );
   const [timeError, setTimeError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -38,11 +45,12 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
       setEditValue(entry.title);
       setEditTime(toHHMM(entry.time));
       setEditEndTime(toHHMM(entry.end_time ?? null));
+      setEditReminderOffset(entry.reminder_offset_minutes ?? null);
       setTimeError(null);
       inputRef.current?.focus();
       inputRef.current?.select();
     }
-  }, [isEditing, entry.title, entry.time, entry.end_time]);
+  }, [isEditing, entry.title, entry.time, entry.end_time, entry.reminder_offset_minutes]);
 
   async function handleToggleComplete() {
     try {
@@ -72,11 +80,16 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
       setEditValue(entry.title);
       setEditTime(toHHMM(entry.time));
       setEditEndTime(toHHMM(entry.end_time ?? null));
+      setEditReminderOffset(entry.reminder_offset_minutes ?? null);
       setTimeError(null);
       return;
     }
     const newTime = editTime.trim() || null;
     const newEndTime = editEndTime.trim() || null;
+    const newReminderOffset =
+      newTime && editReminderOffset != null && editReminderOffset > 0
+        ? editReminderOffset
+        : null;
 
     if (newEndTime && newTime && isEndTimeInvalid(newTime, newEndTime)) {
       setTimeError("La hora de fin debe ser posterior a la de inicio");
@@ -87,7 +100,9 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
     const titleChanged = trimmed !== entry.title;
     const timeChanged = newTime !== toHHMM(entry.time);
     const endTimeChanged = newEndTime !== toHHMM(entry.end_time ?? null);
-    if (!titleChanged && !timeChanged && !endTimeChanged) {
+    const reminderChanged =
+      newReminderOffset !== (entry.reminder_offset_minutes ?? null);
+    if (!titleChanged && !timeChanged && !endTimeChanged && !reminderChanged) {
       setIsEditing(false);
       return;
     }
@@ -96,6 +111,8 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
         title: trimmed,
         time: newTime,
         end_time: newEndTime,
+        reminder_offset_minutes: newReminderOffset,
+        date: entry.date,
       });
       toast.success("Tarea actualizada");
       setIsEditing(false);
@@ -110,6 +127,7 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
     setEditValue(entry.title);
     setEditTime(toHHMM(entry.time));
     setEditEndTime(toHHMM(entry.end_time ?? null));
+    setEditReminderOffset(entry.reminder_offset_minutes ?? null);
     setTimeError(null);
   }
 
@@ -235,17 +253,63 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
                   {timeError}
                 </p>
               )}
+              {editTime ? (
+                <select
+                  value={editReminderOffset ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setEditReminderOffset(v ? Number(v) : null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleInlineSave();
+                    }
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      handleInlineCancel();
+                    }
+                  }}
+                  onBlur={handleInlineSave}
+                  className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  data-testid="entry-card-reminder-select"
+                >
+                  {REMINDER_OPTIONS.map((opt) => (
+                    <option
+                      key={opt.value ?? "none"}
+                      value={opt.value ?? ""}
+                    >
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Los recordatorios requieren hora
+                </p>
+              )}
             </div>
           </div>
         ) : (
           <h4
             onClick={() => setIsEditing(true)}
-            className={`font-medium text-slate-900 dark:text-white cursor-text select-text ${
+            className={`font-medium text-slate-900 dark:text-white cursor-text select-text flex items-center gap-1.5 ${
               entry.is_completed ? "line-through text-slate-500" : ""
             }`}
             data-testid="entry-card-title"
           >
             {formatEntryDisplay(entry)}
+            {(entry.reminder_offset_minutes ?? entry.reminder_at) && (
+              <span
+                title={
+                  entry.reminder_offset_minutes
+                    ? formatReminderOffset(entry.reminder_offset_minutes)
+                    : undefined
+                }
+              >
+                <Bell className="h-4 w-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+              </span>
+            )}
           </h4>
         )}
         {!isEditing && entry.description && (
@@ -269,9 +333,11 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
           {entry.label && (
             <span className="text-xs text-slate-500">{entry.label}</span>
           )}
-          {entry.reminder_at && (
+          {(entry.reminder_offset_minutes ?? entry.reminder_at) && (
             <span className="text-xs text-amber-600 dark:text-amber-400">
-              Reminder: {format(new Date(entry.reminder_at), "MMM d, h:mm a")}
+              {entry.reminder_offset_minutes
+                ? formatReminderOffset(entry.reminder_offset_minutes)
+                : `Reminder: ${format(new Date(entry.reminder_at!), "MMM d, h:mm a")}`}
             </span>
           )}
         </div>

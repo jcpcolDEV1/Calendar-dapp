@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { LogOut, User } from "lucide-react";
+import { Bell, LogOut, User } from "lucide-react";
+import {
+  checkNotificationStatus,
+  registerPushSubscription,
+  requestNotificationPermission,
+} from "@/lib/push-subscription";
+import { toast } from "sonner";
 
 interface UserMenuProps {
   userEmail?: string | null;
@@ -10,7 +16,25 @@ interface UserMenuProps {
 
 export function UserMenu({ userEmail, onSignOut }: UserMenuProps) {
   const [open, setOpen] = useState(false);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsSupported, setNotificationsSupported] = useState(false);
+  const [hasSubscription, setHasSubscription] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setNotificationsSupported(
+      "Notification" in window &&
+        "serviceWorker" in navigator &&
+        "PushManager" in window
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!notificationsSupported) return;
+    checkNotificationStatus().then(({ hasSubscription: sub }) =>
+      setHasSubscription(sub)
+    );
+  }, [notificationsSupported]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -46,6 +70,48 @@ export function UserMenu({ userEmail, onSignOut }: UserMenuProps) {
               {userEmail ?? "User"}
             </p>
           </div>
+          {notificationsSupported && (
+            hasSubscription ? (
+              <div
+                className="flex items-center gap-2 px-3 py-2 text-sm text-slate-500 dark:text-slate-400"
+                data-testid="user-menu-notifications-active"
+              >
+                <Bell className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                Notificaciones activadas
+              </div>
+            ) : (
+              <button
+                onClick={async () => {
+                  setNotificationsLoading(true);
+                  try {
+                    const permission = await requestNotificationPermission();
+                    if (permission === "granted") {
+                      await registerPushSubscription();
+                      setHasSubscription(true);
+                      toast.success("Notificaciones activadas");
+                      setOpen(false);
+                    } else if (permission === "denied") {
+                      toast.error("Permiso denegado");
+                    } else {
+                      toast.info("Puedes activar las notificaciones más tarde");
+                    }
+                  } catch (err) {
+                    toast.error(
+                      err instanceof Error ? err.message : "Error al activar"
+                    );
+                  } finally {
+                    setNotificationsLoading(false);
+                  }
+                }}
+                disabled={notificationsLoading}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+                data-testid="user-menu-notifications"
+              >
+                <Bell className="h-4 w-4" />
+                {notificationsLoading ? "Activando..." : "Activar notificaciones"}
+              </button>
+            )
+          )}
           <button
             onClick={() => {
               onSignOut();

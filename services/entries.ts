@@ -85,6 +85,7 @@ export async function getUpcomingReminders(
     .from("entries")
     .select("*")
     .eq("calendar_id", calendarId)
+    .eq("is_completed", false)
     .not("reminder_at", "is", null)
     .gte("reminder_at", now)
     .order("reminder_at", { ascending: true })

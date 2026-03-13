@@ -22,6 +22,8 @@ export interface Entry {
   time: string | null;
   end_time: string | null;
   reminder_at: string | null;
+  reminder_offset_minutes: number | null;
+  reminder_sent_at: string | null;
   priority: Priority;
   label: string;
   color: string;
@@ -41,6 +43,8 @@ export interface EntryInsert {
   time?: string | null;
   end_time?: string | null;
   reminder_at?: string | null;
+  reminder_offset_minutes?: number | null;
+  reminder_sent_at?: string | null;
   priority?: Priority;
   label?: string;
   color?: string;
@@ -56,6 +60,8 @@ export interface EntryUpdate {
   time?: string | null;
   end_time?: string | null;
   reminder_at?: string | null;
+  reminder_offset_minutes?: number | null;
+  reminder_sent_at?: string | null;
   priority?: Priority;
   label?: string;
   color?: string;

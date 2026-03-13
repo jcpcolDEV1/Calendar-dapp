@@ -73,6 +73,7 @@ export function DayCell({
               title={task.title}
             >
               {formatEntryDisplay(task)}
+              {(task.reminder_offset_minutes ?? task.reminder_at) && " 🔔"}
             </div>
           ))}
           {remainingCount > 0 && (

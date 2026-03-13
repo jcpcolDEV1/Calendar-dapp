@@ -28,6 +28,8 @@ CREATE TABLE IF NOT EXISTS public.entries (
   time TIME,
   end_time TIME,
   reminder_at TIMESTAMPTZ,
+  reminder_offset_minutes INTEGER,
+  reminder_sent_at TIMESTAMPTZ,
   priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
   label TEXT DEFAULT '',
   color TEXT DEFAULT '',
@@ -35,6 +37,16 @@ CREATE TABLE IF NOT EXISTS public.entries (
   recurrence_type TEXT NOT NULL DEFAULT 'none' CHECK (recurrence_type IN ('none', 'daily', 'weekly', 'monthly', 'yearly')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.push_subscriptions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id, endpoint)
 );
 
 -- ============================================
@@ -92,6 +104,13 @@ CREATE POLICY "Users can update own calendars"
 CREATE POLICY "Users can delete own calendars"
   ON public.calendars FOR DELETE
   USING (auth.uid() = owner_user_id);
+
+ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own push subscriptions"
+  ON public.push_subscriptions FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 -- Entries: users can only access entries in calendars they own
 CREATE POLICY "Users can view entries in own calendars"
