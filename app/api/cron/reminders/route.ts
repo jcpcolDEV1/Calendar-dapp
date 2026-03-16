@@ -52,12 +52,19 @@ export async function GET(request: NextRequest) {
 
   let sentCount = 0;
   const errors: string[] = [];
+  const debug: { entryId: string; subsFound: number }[] = [];
 
   for (const entry of entries) {
-    const { data: subscriptions } = await supabase
+    const { data: subscriptions, error: subsError } = await supabase
       .from("push_subscriptions")
       .select("endpoint, p256dh, auth")
       .eq("user_id", entry.created_by_user_id);
+
+    debug.push({
+      entryId: entry.id,
+      subsFound: subscriptions?.length ?? 0,
+    });
+    if (subsError) errors.push(`Subs ${entry.id}: ${subsError.message}`);
 
     if (!subscriptions || subscriptions.length === 0) continue;
 
@@ -105,6 +112,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     sent: sentCount,
     entries: entries.length,
+    debug,
     errors: errors.length > 0 ? errors : undefined,
   });
 }
