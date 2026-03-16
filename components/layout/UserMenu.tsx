@@ -6,6 +6,7 @@ import {
   checkNotificationStatus,
   registerPushSubscription,
   requestNotificationPermission,
+  syncSubscriptionToServer,
 } from "@/lib/push-subscription";
 import { toast } from "sonner";
 
@@ -34,6 +35,12 @@ export function UserMenu({ userEmail, onSignOut }: UserMenuProps) {
     checkNotificationStatus().then(({ hasSubscription: sub }) =>
       setHasSubscription(sub)
     );
+  }, [notificationsSupported]);
+
+  // Sync existing browser subscription to DB on load (fixes orphaned subscriptions)
+  useEffect(() => {
+    if (!notificationsSupported) return;
+    syncSubscriptionToServer();
   }, [notificationsSupported]);
 
   useEffect(() => {

@@ -65,6 +65,33 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   return Notification.requestPermission();
 }
 
+/**
+ * Sync existing browser push subscription to server (DB).
+ * Call on app load to ensure subscriptions in the browser are saved to push_subscriptions.
+ * Runs silently - no permission request, no user feedback.
+ */
+export async function syncSubscriptionToServer(): Promise<void> {
+  if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) return;
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const existingSubscription = await registration.pushManager.getSubscription();
+    if (!existingSubscription) return;
+
+    const res = await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(existingSubscription.toJSON()),
+    });
+    if (!res.ok) {
+      console.warn("Push subscription sync failed:", await res.text());
+    }
+  } catch {
+    // Silent - sync is best-effort
+  }
+}
+
 export async function checkNotificationStatus(): Promise<{
   permission: NotificationPermission;
   hasSubscription: boolean;
