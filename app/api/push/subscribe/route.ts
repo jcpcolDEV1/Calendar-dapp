@@ -20,15 +20,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const { error } = await supabase.from("push_subscriptions").upsert(
-      {
-        user_id: user.id,
-        endpoint,
-        p256dh: keys.p256dh,
-        auth: keys.auth,
-      },
-      { onConflict: "user_id,endpoint" }
-    );
+    const { data, error } = await supabase
+      .from("push_subscriptions")
+      .upsert(
+        {
+          user_id: user.id,
+          endpoint,
+          p256dh: keys.p256dh,
+          auth: keys.auth,
+        },
+        { onConflict: "user_id,endpoint" }
+      )
+      .select("id")
+      .single();
 
     if (error) {
       console.error("Push subscription save error:", error);
@@ -38,7 +42,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, id: data?.id });
   } catch (err) {
     console.error("Push subscribe error:", err);
     return NextResponse.json(
