@@ -18,6 +18,7 @@ interface UserMenuProps {
 export function UserMenu({ userEmail, onSignOut }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [testLoading, setTestLoading] = useState(false);
   const [notificationsSupported, setNotificationsSupported] = useState(false);
   const [hasSubscription, setHasSubscription] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -79,12 +80,46 @@ export function UserMenu({ userEmail, onSignOut }: UserMenuProps) {
           </div>
           {notificationsSupported && (
             hasSubscription ? (
-              <div
-                className="flex items-center gap-2 px-3 py-2 text-sm text-slate-500 dark:text-slate-400"
-                data-testid="user-menu-notifications-active"
-              >
-                <Bell className="h-4 w-4 text-amber-500 dark:text-amber-400" />
-                Notificaciones activadas
+              <div className="space-y-1">
+                <div
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-slate-500 dark:text-slate-400"
+                  data-testid="user-menu-notifications-active"
+                >
+                  <Bell className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                  Notificaciones activadas
+                </div>
+                <button
+                  onClick={async () => {
+                    setTestLoading(true);
+                    try {
+                      const res = await fetch("/api/push/test", {
+                        method: "POST",
+                        credentials: "include",
+                      });
+                      const data = await res.json();
+                      if (data.error) {
+                        toast.error(data.error);
+                      } else if (data.sent > 0) {
+                        toast.success(
+                          `Enviada. Minimiza la ventana para verla.`
+                        );
+                      } else {
+                        toast.error(
+                          data.results?.[0]?.error ?? "No se pudo enviar"
+                        );
+                      }
+                    } catch {
+                      toast.error("Error al enviar prueba");
+                    } finally {
+                      setTestLoading(false);
+                    }
+                  }}
+                  disabled={testLoading}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+                >
+                  <Bell className="h-4 w-4" />
+                  {testLoading ? "Enviando..." : "Probar notificación"}
+                </button>
               </div>
             ) : (
               <button
