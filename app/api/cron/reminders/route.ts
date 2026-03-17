@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
 
   const supabase = createAdminClient();
   const now = new Date().toISOString();
+  const forceEntryId = request.nextUrl.searchParams.get("force");
 
   // First: backfill reminder_at for entries that have time + offset but reminder_at null
   const { data: toBackfill } = await supabase
@@ -55,13 +56,20 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const { data: entries, error: entriesError } = await supabase
+  let entriesQuery = supabase
     .from("entries")
     .select("id, title, reminder_at, created_by_user_id")
     .not("reminder_at", "is", null)
     .is("reminder_sent_at", null)
-    .eq("is_completed", false)
-    .lte("reminder_at", now);
+    .eq("is_completed", false);
+
+  if (forceEntryId) {
+    entriesQuery = entriesQuery.eq("id", forceEntryId);
+  } else {
+    entriesQuery = entriesQuery.lte("reminder_at", now);
+  }
+
+  const { data: entries, error: entriesError } = await entriesQuery;
 
   if (entriesError) {
     console.error("Cron reminders: entries query error", entriesError);
