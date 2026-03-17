@@ -122,8 +122,13 @@ export async function GET(request: NextRequest) {
         sentCount++;
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`${entry.id}: ${msg}`);
-        if (msg.includes("410") || msg.includes("404")) {
+        errors.push(`${entry.id}: ${msg} (endpoint: ${sub.endpoint?.slice(0, 50)}...)`);
+        // Remove expired/invalid subscriptions (410 Gone, 404 Not Found, or unexpected response)
+        if (
+          msg.includes("410") ||
+          msg.includes("404") ||
+          msg.includes("unexpected response")
+        ) {
           await supabase
             .from("push_subscriptions")
             .delete()
