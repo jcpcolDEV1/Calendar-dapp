@@ -27,10 +27,17 @@ export async function GET(request: NextRequest) {
   // Entradas con offset pero SIN reminder_at (candidatas a backfill)
   const { data: needBackfill } = await supabase
     .from("entries")
-    .select("id, title, date, time, reminder_offset_minutes")
+    .select("id, title, date, time, reminder_offset_minutes, reminder_at")
     .is("reminder_at", null)
     .not("reminder_offset_minutes", "is", null)
     .not("time", "is", null);
+
+  // Todas con reminder_offset_minutes (para ver qué hay)
+  const { data: withOffset } = await supabase
+    .from("entries")
+    .select("id, title, date, time, reminder_at, reminder_offset_minutes")
+    .not("reminder_offset_minutes", "is", null)
+    .gt("reminder_offset_minutes", 0);
 
   if (rErr) {
     return NextResponse.json({ error: rErr.message });
@@ -45,6 +52,8 @@ export async function GET(request: NextRequest) {
     server_now: nowISO,
     server_now_readable: now.toLocaleString("es-ES", { timeZone: "UTC" }) + " UTC",
     with_reminder_count: withReminder?.length ?? 0,
+    with_offset_count: withOffset?.length ?? 0,
+    with_offset: withOffset,
     need_backfill_count: needBackfill?.length ?? 0,
     need_backfill: needBackfill,
     candidates_count: candidates.length,
