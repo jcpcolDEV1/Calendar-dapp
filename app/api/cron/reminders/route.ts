@@ -30,6 +30,31 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient();
   const now = new Date().toISOString();
 
+  // First: backfill reminder_at for entries that have time + offset but reminder_at null
+  const { data: toBackfill } = await supabase
+    .from("entries")
+    .select("id, date, time, reminder_offset_minutes")
+    .is("reminder_at", null)
+    .not("reminder_offset_minutes", "is", null)
+    .not("time", "is", null);
+
+  if (toBackfill?.length) {
+    const { computeReminderAt } = await import("@/lib/reminder-utils");
+    for (const row of toBackfill) {
+      const offset = row.reminder_offset_minutes;
+      if (offset == null || offset <= 0) continue;
+      const timeStr = String(row.time).trim().slice(0, 5);
+      if (timeStr.length < 5) continue;
+      const reminder_at = computeReminderAt(row.date, timeStr, offset);
+      if (reminder_at) {
+        await supabase
+          .from("entries")
+          .update({ reminder_at })
+          .eq("id", row.id);
+      }
+    }
+  }
+
   const { data: entries, error: entriesError } = await supabase
     .from("entries")
     .select("id, title, reminder_at, created_by_user_id")
