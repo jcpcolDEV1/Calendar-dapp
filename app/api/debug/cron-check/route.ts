@@ -18,17 +18,24 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   const nowISO = now.toISOString();
 
-  // Todas las entradas con reminder_at (para ver estado real)
+  // Entradas con reminder_at
   const { data: withReminder, error: rErr } = await supabase
     .from("entries")
     .select("id, title, reminder_at, reminder_sent_at, is_completed, created_by_user_id")
     .not("reminder_at", "is", null);
 
+  // Entradas con offset pero SIN reminder_at (candidatas a backfill)
+  const { data: needBackfill } = await supabase
+    .from("entries")
+    .select("id, title, date, time, reminder_offset_minutes")
+    .is("reminder_at", null)
+    .not("reminder_offset_minutes", "is", null)
+    .not("time", "is", null);
+
   if (rErr) {
     return NextResponse.json({ error: rErr.message });
   }
 
-  // Las que el cron buscaría (reminder_sent_at null, is_completed false)
   const candidates = withReminder?.filter(
     (e) => e.reminder_sent_at == null && e.is_completed === false
   ) ?? [];
@@ -38,6 +45,8 @@ export async function GET(request: NextRequest) {
     server_now: nowISO,
     server_now_readable: now.toLocaleString("es-ES", { timeZone: "UTC" }) + " UTC",
     with_reminder_count: withReminder?.length ?? 0,
+    need_backfill_count: needBackfill?.length ?? 0,
+    need_backfill: needBackfill,
     candidates_count: candidates.length,
     due_count: due.length,
     all_with_reminder: withReminder?.map((e) => ({
