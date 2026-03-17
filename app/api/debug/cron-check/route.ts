@@ -18,29 +18,34 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   const nowISO = now.toISOString();
 
-  // Entries with reminder_at, not sent, not completed (sin filtro de tiempo)
-  const { data: candidates, error: candErr } = await supabase
+  // Todas las entradas con reminder_at (para ver estado real)
+  const { data: withReminder, error: rErr } = await supabase
     .from("entries")
     .select("id, title, reminder_at, reminder_sent_at, is_completed, created_by_user_id")
-    .not("reminder_at", "is", null)
-    .is("reminder_sent_at", null)
-    .eq("is_completed", false);
+    .not("reminder_at", "is", null);
 
-  if (candErr) {
-    return NextResponse.json({ error: candErr.message });
+  if (rErr) {
+    return NextResponse.json({ error: rErr.message });
   }
 
-  const due = candidates?.filter((e) => e.reminder_at && e.reminder_at <= nowISO) ?? [];
+  // Las que el cron buscaría (reminder_sent_at null, is_completed false)
+  const candidates = withReminder?.filter(
+    (e) => e.reminder_sent_at == null && e.is_completed === false
+  ) ?? [];
+  const due = candidates.filter((e) => e.reminder_at && e.reminder_at <= nowISO);
 
   return NextResponse.json({
     server_now: nowISO,
     server_now_readable: now.toLocaleString("es-ES", { timeZone: "UTC" }) + " UTC",
-    candidates_count: candidates?.length ?? 0,
+    with_reminder_count: withReminder?.length ?? 0,
+    candidates_count: candidates.length,
     due_count: due.length,
-    candidates: candidates?.map((e) => ({
+    all_with_reminder: withReminder?.map((e) => ({
       id: e.id,
       title: e.title,
       reminder_at: e.reminder_at,
+      reminder_sent_at: e.reminder_sent_at,
+      is_completed: e.is_completed,
       is_due: e.reminder_at ? e.reminder_at <= nowISO : false,
     })),
   });
