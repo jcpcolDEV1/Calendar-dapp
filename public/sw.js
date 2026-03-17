@@ -3,7 +3,7 @@ self.addEventListener("push", (event) => {
   const title = data.title ?? "Recordatorio";
   const options = {
     body: data.body ?? "",
-    icon: "/favicon.ico",
+    requireInteraction: true,
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
