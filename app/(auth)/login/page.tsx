@@ -4,7 +4,10 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { getAuthErrorMessage } from "@/lib/auth-errors";
+import {
+  getAuthErrorMessage,
+  getEmailCallbackBannerMessage,
+} from "@/lib/auth-errors";
 import { toast } from "sonner";
 
 /** Only allow internal paths to prevent open redirects */
@@ -21,11 +24,18 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = getSafeRedirectTo(searchParams.get("redirectTo"));
   const sessionExpired = searchParams.get("reason") === "session_expired";
+  const emailCallbackMessage = getEmailCallbackBannerMessage(
+    searchParams.get("authError"),
+    searchParams.get("authErrorDescription")
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showSessionExpiredBanner, setShowSessionExpiredBanner] = useState(sessionExpired);
+  const [showEmailCallbackBanner, setShowEmailCallbackBanner] = useState(
+    Boolean(emailCallbackMessage)
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -63,6 +73,23 @@ function LoginForm() {
             <button
               type="button"
               onClick={() => setShowSessionExpiredBanner(false)}
+              className="shrink-0 p-1 rounded hover:bg-amber-100 dark:hover:bg-amber-800/50"
+              aria-label="Cerrar"
+            >
+              ×
+            </button>
+          </div>
+        )}
+        {showEmailCallbackBanner && emailCallbackMessage && (
+          <div
+            className="mb-4 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-sm flex items-center justify-between gap-2"
+            role="status"
+            data-testid="login-email-callback-banner"
+          >
+            <span>{emailCallbackMessage}</span>
+            <button
+              type="button"
+              onClick={() => setShowEmailCallbackBanner(false)}
               className="shrink-0 p-1 rounded hover:bg-amber-100 dark:hover:bg-amber-800/50"
               aria-label="Cerrar"
             >

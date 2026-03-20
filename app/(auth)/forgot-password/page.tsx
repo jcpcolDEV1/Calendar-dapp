@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
+import { getPasswordResetRedirectUrl } from "@/lib/auth-public-origin";
 import { toast } from "sonner";
 
 export default function ForgotPasswordPage() {
@@ -20,8 +21,9 @@ export default function ForgotPasswordPage() {
     setErrorMessage(null);
     try {
       const supabase = createClient();
+      const redirectTo = getPasswordResetRedirectUrl();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/update-password`,
+        ...(redirectTo ? { redirectTo } : {}),
       });
       if (error) throw error;
       // Always show same message to avoid email enumeration

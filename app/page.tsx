@@ -1,6 +1,31 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
-export default function LandingPage() {
+type LandingProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+/**
+ * Supabase may redirect failed/expired email links to Site URL (often `/`)
+ * with `?error=...` instead of `/auth/callback`. Forward to login with a clear message.
+ */
+export default async function LandingPage({ searchParams }: LandingProps) {
+  const sp = await searchParams;
+  const error = sp.error;
+  if (typeof error === "string" && error.length > 0) {
+    const params = new URLSearchParams();
+    const code = sp.error_code;
+    params.set(
+      "authError",
+      typeof code === "string" && code ? code : error
+    );
+    const desc = sp.error_description;
+    if (typeof desc === "string" && desc) {
+      params.set("authErrorDescription", desc);
+    }
+    redirect(`/login?${params.toString()}`);
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <div className="max-w-2xl mx-auto px-6 text-center">

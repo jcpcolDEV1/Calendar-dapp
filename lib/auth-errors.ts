@@ -59,3 +59,36 @@ export function getAuthErrorMessage(
       return "Ha ocurrido un error.";
   }
 }
+
+/** Messages for /auth/callback → /login?authError=… (email confirmation link) */
+export function getEmailCallbackBannerMessage(
+  authError: string | null,
+  authErrorDescription: string | null
+): string | null {
+  if (!authError) return null;
+
+  const desc = authErrorDescription?.trim() ?? "";
+  const lower = desc.toLowerCase();
+
+  if (
+    authError === "otp_expired" ||
+    lower.includes("expired") ||
+    lower.includes("invalid or has expired")
+  ) {
+    return "El enlace de confirmación ha caducado o ya no es válido. Crea la cuenta de nuevo o, si ya confirmaste, inicia sesión.";
+  }
+
+  if (authError === "access_denied") {
+    return desc || "No se pudo confirmar el correo. Prueba a registrarte de nuevo o inicia sesión.";
+  }
+
+  if (authError === "exchange_failed") {
+    return desc || "No se pudo completar el inicio de sesión. Prueba el enlace del correo de nuevo.";
+  }
+
+  if (authError === "missing_code") {
+    return desc || "Enlace de confirmación incompleto. Abre el enlace desde el correo más reciente.";
+  }
+
+  return desc || "No se pudo completar la confirmación del correo.";
+}

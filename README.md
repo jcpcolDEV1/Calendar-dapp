@@ -92,16 +92,21 @@ If a dev server is **already** running on port 3002 **without** that env (`reuse
 Your Supabase project is already hosted. Ensure:
 
 - **Authentication > Providers**: Email is enabled
-- **Authentication > URL Configuration**: Add your URLs to Site URL and Redirect URLs:
-  - `http://localhost:3000` (dev)
-  - `http://localhost:3000/update-password` (forgot password flow)
-  - Your production URL (e.g. `https://your-app.vercel.app`)
-  - `https://your-app.vercel.app/update-password` (forgot password flow)
+- **Authentication > URL Configuration**:
+  - **Site URL**: your real production URL (e.g. `https://your-app.vercel.app`). Must match a live Vercel deployment — old preview URLs like `https://your-app-xxxxx.vercel.app` that no longer exist cause `DEPLOYMENT_NOT_FOUND` when users open the email link.
+  - **Redirect URLs** (allow list — add every origin you use):
+    - `http://localhost:3000/**` (or `http://localhost:3000/auth/callback`, etc.)
+    - `https://your-app.vercel.app/auth/callback` (email confirmation after signup)
+    - `https://your-app.vercel.app/update-password` (forgot password)
+    - Optional: `https://*.vercel.app/auth/callback` if your Supabase plan supports wildcards (preview deployments).
+
+The app sends **`emailRedirectTo`** = `{origin}/auth/callback` on signup. In production, set **`NEXT_PUBLIC_APP_URL`** in Vercel (e.g. `https://your-app.vercel.app`) so confirmation links never use a deleted preview hostname. Localhost always uses the current browser origin. See [docs/SUPABASE_AUTH_URLS.md](docs/SUPABASE_AUTH_URLS.md) for a full checklist.
 
 ## Project structure
 
 ```
 app/
+  auth/callback/           # Email confirmation (PKCE) — set in Supabase Redirect URLs
   (auth)/login, signup, forgot-password, update-password  # Auth pages
   (dashboard)/app/         # Protected calendar dashboard
   actions/                 # Server actions (entries, auth, data)

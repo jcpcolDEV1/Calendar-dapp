@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
+import { getEmailConfirmationCallbackUrl } from "@/lib/auth-public-origin";
 import { toast } from "sonner";
 
 export default function SignupPage() {
@@ -23,7 +24,13 @@ export default function SignupPage() {
     setErrorMessage(null);
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const emailRedirectTo =
+        getEmailConfirmationCallbackUrl() || undefined;
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        ...(emailRedirectTo ? { options: { emailRedirectTo } } : {}),
+      });
       if (error) throw error;
 
       // Supabase does not return error for existing email when confirm is enabled; identities is empty
