@@ -12,6 +12,7 @@ import {
 import type { Calendar, Entry, EntryType, Priority } from "@/types";
 import { Header } from "@/components/layout/Header";
 import { ServiceWorkerRegistration } from "@/components/notifications/ServiceWorkerRegistration";
+import { NotificationPermissionBanner } from "@/components/notifications/NotificationPermissionBanner";
 import { CalendarGrid } from "./CalendarGrid";
 import { DayDetailPanel } from "@/components/entries/DayDetailPanel";
 import { UpcomingTasks } from "@/components/sidebar/UpcomingTasks";
@@ -146,6 +147,7 @@ export function CalendarDashboard({
         onToday={() => setCurrentMonth(new Date())}
         userEmail={userEmail}
       />
+      <NotificationPermissionBanner />
 
       <div className="flex flex-1 min-h-0">
         <main className="flex-1 min-w-0 overflow-auto flex flex-col">

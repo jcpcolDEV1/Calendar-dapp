@@ -27,5 +27,12 @@ export default defineConfig({
     url: "http://localhost:3002",
     reuseExistingServer: true,
     timeout: 180000,
+    env: {
+      ...process.env,
+      // So NotificationPermissionBanner renders in E2E (real subscribe is mocked in tests)
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY:
+        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
+        "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U",
+    },
   },
 });

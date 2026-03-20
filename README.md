@@ -68,9 +68,13 @@ Open [http://localhost:3000](http://localhost:3000).
 npx playwright install chromium   # First time only
 npm run test:e2e                  # All tests
 npm run test:e2e tests/calendar-flows.spec.ts   # Calendar flows only
+npm run test:e2e:notifications    # Notification banner (mocked browser APIs)
 ```
 
-Tests run against `http://localhost:3001`. The dev server starts automatically if not running.
+Playwright uses `http://localhost:3002` and can start `next dev` automatically (`playwright.config.ts`).  
+**Notification banner tests** (`tests/notification-banner.spec.ts`) mock `Notification`, `navigator.serviceWorker`, and `PushManager`, and stub `POST /api/push/subscribe`, so no real permission dialog or push backend is required. The config sets a fallback `NEXT_PUBLIC_VAPID_PUBLIC_KEY` when Playwright starts the dev server so the banner can render.
+
+If a dev server is **already** running on port 3002 **without** that env (`reuseExistingServer`), those tests may not see the banner—stop that process or run with `CI=1` so Playwright starts a fresh server.
 
 ## Deployment
 

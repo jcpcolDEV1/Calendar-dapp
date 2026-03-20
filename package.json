@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:e2e": "playwright test",
+    "test:e2e:notifications": "playwright test tests/notification-banner.spec.ts",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:watch": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui"
