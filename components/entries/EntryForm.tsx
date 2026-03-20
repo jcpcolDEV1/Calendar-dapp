@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { Entry, EntryType, Priority } from "@/types";
 import { ENTRY_TYPES, PRIORITIES, COLOR_OPTIONS } from "@/lib/constants";
 import {
@@ -8,6 +8,7 @@ import {
   reminderWallFromOffset,
 } from "@/lib/reminder-utils";
 import { ReminderDateTimeFields } from "@/components/entries/ReminderDateTimeFields";
+import { ReminderPushCallout } from "@/components/notifications/ReminderPushCallout";
 import { getClientIanaTimeZone } from "@/lib/client-timezone";
 import { toast } from "sonner";
 
@@ -64,6 +65,21 @@ export function EntryForm({
   const [color, setColor] = useState(entry?.color ?? "");
   const [isCompleted, setIsCompleted] = useState(entry?.is_completed ?? false);
   const [loading, setLoading] = useState(false);
+
+  const hasValidReminder = useMemo(() => {
+    const timeVal = time?.trim() || null;
+    if (!timeVal || timeVal.length < 5) return false;
+    if (!reminderDate.trim() || !reminderTime.trim()) return false;
+    const tz = getClientIanaTimeZone();
+    const r = offsetMinutesFromReminderWallTime(
+      formDate,
+      timeVal.slice(0, 5),
+      reminderDate,
+      reminderTime,
+      tz
+    );
+    return r.ok;
+  }, [time, reminderDate, reminderTime, formDate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -198,6 +214,7 @@ export function EntryForm({
           onReminderTimeChange={setReminderTime}
           zoneHint={getClientIanaTimeZone()}
         />
+        <ReminderPushCallout show={hasValidReminder} />
       </div>
 
       <div>

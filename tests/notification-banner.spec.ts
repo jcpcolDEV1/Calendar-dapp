@@ -45,7 +45,9 @@ test.describe("Notification permission banner (mocked browser APIs)", () => {
     const banner = page.getByTestId("notification-permission-banner");
     await expect(banner).toBeVisible({ timeout: 8000 });
     await expect(
-      page.getByText("Activa notificaciones para recibir recordatorios")
+      page.getByText(
+        "Activa notificaciones para recibir recordatorios de tus tareas en este dispositivo."
+      )
     ).toBeVisible();
 
     await page.getByTestId("notification-permission-banner-activate").click();

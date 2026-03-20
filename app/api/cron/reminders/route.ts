@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { shouldRemovePushSubscription } from "@/lib/push-send-errors";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -128,12 +129,7 @@ export async function GET(request: NextRequest) {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         errors.push(`${entry.id}: ${msg} (endpoint: ${sub.endpoint?.slice(0, 50)}...)`);
-        // Remove expired/invalid subscriptions (410 Gone, 404 Not Found, or unexpected response)
-        if (
-          msg.includes("410") ||
-          msg.includes("404") ||
-          msg.includes("unexpected response")
-        ) {
+        if (shouldRemovePushSubscription(err)) {
           await supabase
             .from("push_subscriptions")
             .delete()

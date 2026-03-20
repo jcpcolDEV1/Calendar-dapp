@@ -85,7 +85,7 @@ export function NotificationPermissionBanner() {
       if (permission === "granted") {
         await registerPushSubscription();
         setVisible(false);
-        toast.success("Notificaciones activadas");
+        toast.success("Notificaciones activadas en este dispositivo");
       } else if (permission === "denied") {
         setVisible(false);
         toast.error("Permiso denegado. Puedes cambiarlo en los ajustes del navegador.");
@@ -123,11 +123,12 @@ export function NotificationPermissionBanner() {
           />
           <div>
             <p className="text-sm font-medium text-slate-900 dark:text-white">
-              Activa notificaciones para recibir recordatorios de tus tareas
+              Activa notificaciones para recibir recordatorios de tus tareas en
+              este dispositivo.
             </p>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-              Te avisaremos cuando llegue la hora de cada recordatorio. Solo se
-              usa con tu permiso.
+              Cada navegador o dispositivo se configura por separado. Solo se
+              usa con tu permiso, cuando pulses el botón.
             </p>
           </div>
         </div>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Bell, LogOut, User } from "lucide-react";
 import {
   checkNotificationStatus,
+  getPushSubscriptionEndpoint,
   registerPushSubscription,
   requestNotificationPermission,
   syncSubscriptionToServer,
@@ -20,8 +21,17 @@ export function UserMenu({ userEmail, onSignOut }: UserMenuProps) {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [testLoading, setTestLoading] = useState(false);
   const [notificationsSupported, setNotificationsSupported] = useState(false);
+  const [permission, setPermission] =
+    useState<NotificationPermission>("default");
   const [hasSubscription, setHasSubscription] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  const refreshPushState = useCallback(async () => {
+    if (!notificationsSupported) return;
+    const s = await checkNotificationStatus();
+    setPermission(s.permission);
+    setHasSubscription(s.hasSubscription);
+  }, [notificationsSupported]);
 
   useEffect(() => {
     setNotificationsSupported(
@@ -32,11 +42,8 @@ export function UserMenu({ userEmail, onSignOut }: UserMenuProps) {
   }, []);
 
   useEffect(() => {
-    if (!notificationsSupported) return;
-    checkNotificationStatus().then(({ hasSubscription: sub }) =>
-      setHasSubscription(sub)
-    );
-  }, [notificationsSupported]);
+    void refreshPushState();
+  }, [refreshPushState]);
 
   // Sync existing browser subscription to DB on load (fixes orphaned subscriptions)
   useEffect(() => {
@@ -72,87 +79,120 @@ export function UserMenu({ userEmail, onSignOut }: UserMenuProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-56 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg py-1 z-50">
+        <div className="absolute right-0 mt-2 w-64 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg py-1 z-50">
           <div className="px-3 py-2 border-b border-slate-200 dark:border-slate-700">
             <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
               {userEmail ?? "User"}
             </p>
           </div>
           {notificationsSupported && (
-            hasSubscription ? (
-              <div className="space-y-1">
+            <>
+              {permission === "denied" && (
                 <div
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-slate-500 dark:text-slate-400"
-                  data-testid="user-menu-notifications-active"
+                  className="px-3 py-2 text-xs text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700"
+                  data-testid="user-menu-notifications-blocked"
                 >
-                  <Bell className="h-4 w-4 text-amber-500 dark:text-amber-400" />
-                  Notificaciones activadas
+                  Las notificaciones están bloqueadas en este navegador. Actívalas
+                  en la configuración del sitio (icono del candado o del sitio en
+                  la barra de direcciones).
                 </div>
+              )}
+              {permission !== "denied" &&
+                hasSubscription && (
+                  <div className="space-y-1 border-b border-slate-200 dark:border-slate-700 pb-1">
+                    <div
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-slate-500 dark:text-slate-400"
+                      data-testid="user-menu-notifications-active"
+                    >
+                      <Bell className="h-4 w-4 text-amber-500 dark:text-amber-400 shrink-0" />
+                      <span>Notificaciones activas en este dispositivo</span>
+                    </div>
+                    <p className="px-3 text-[11px] text-slate-500 dark:text-slate-500 leading-snug">
+                      La prueba se envía solo a este dispositivo.
+                    </p>
+                    <button
+                      onClick={async () => {
+                        setTestLoading(true);
+                        try {
+                          const endpoint = await getPushSubscriptionEndpoint();
+                          if (!endpoint) {
+                            toast.error(
+                              "No hay suscripción en este navegador. Activa las notificaciones primero."
+                            );
+                            return;
+                          }
+                          const res = await fetch("/api/push/test", {
+                            method: "POST",
+                            credentials: "include",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ endpoint }),
+                          });
+                          const data = await res.json();
+                          if (data.error) {
+                            toast.error(data.error);
+                          } else if (data.sent > 0) {
+                            toast.success(
+                              "Enviada a este dispositivo. Minimiza la ventana para verla."
+                            );
+                          } else {
+                            toast.error(
+                              data.results?.[0]?.error ?? "No se pudo enviar"
+                            );
+                          }
+                        } catch {
+                          toast.error("Error al enviar prueba");
+                        } finally {
+                          setTestLoading(false);
+                        }
+                      }}
+                      disabled={testLoading}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+                      data-testid="user-menu-test-notification"
+                    >
+                      <Bell className="h-4 w-4 shrink-0" />
+                      {testLoading ? "Enviando..." : "Probar notificación"}
+                    </button>
+                  </div>
+                )}
+              {permission !== "denied" && !hasSubscription && (
                 <button
                   onClick={async () => {
-                    setTestLoading(true);
+                    setNotificationsLoading(true);
                     try {
-                      const res = await fetch("/api/push/test", {
-                        method: "POST",
-                        credentials: "include",
-                      });
-                      const data = await res.json();
-                      if (data.error) {
-                        toast.error(data.error);
-                      } else if (data.sent > 0) {
+                      const perm = await requestNotificationPermission();
+                      if (perm === "granted") {
+                        await registerPushSubscription();
+                        setHasSubscription(true);
+                        setPermission("granted");
                         toast.success(
-                          `Enviada. Minimiza la ventana para verla.`
+                          "Notificaciones activadas en este dispositivo"
                         );
+                        setOpen(false);
+                      } else if (perm === "denied") {
+                        setPermission("denied");
+                        toast.error("Permiso denegado");
                       } else {
-                        toast.error(
-                          data.results?.[0]?.error ?? "No se pudo enviar"
-                        );
+                        toast.info("Puedes activar las notificaciones más tarde");
                       }
-                    } catch {
-                      toast.error("Error al enviar prueba");
+                    } catch (err) {
+                      toast.error(
+                        err instanceof Error ? err.message : "Error al activar"
+                      );
                     } finally {
-                      setTestLoading(false);
+                      setNotificationsLoading(false);
                     }
                   }}
-                  disabled={testLoading}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+                  disabled={notificationsLoading}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+                  data-testid="user-menu-notifications"
                 >
-                  <Bell className="h-4 w-4" />
-                  {testLoading ? "Enviando..." : "Probar notificación"}
+                  <Bell className="h-4 w-4 shrink-0" />
+                  {notificationsLoading
+                    ? "Activando..."
+                    : "Activar notificaciones en este dispositivo"}
                 </button>
-              </div>
-            ) : (
-              <button
-                onClick={async () => {
-                  setNotificationsLoading(true);
-                  try {
-                    const permission = await requestNotificationPermission();
-                    if (permission === "granted") {
-                      await registerPushSubscription();
-                      setHasSubscription(true);
-                      toast.success("Notificaciones activadas");
-                      setOpen(false);
-                    } else if (permission === "denied") {
-                      toast.error("Permiso denegado");
-                    } else {
-                      toast.info("Puedes activar las notificaciones más tarde");
-                    }
-                  } catch (err) {
-                    toast.error(
-                      err instanceof Error ? err.message : "Error al activar"
-                    );
-                  } finally {
-                    setNotificationsLoading(false);
-                  }
-                }}
-                disabled={notificationsLoading}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
-                data-testid="user-menu-notifications"
-              >
-                <Bell className="h-4 w-4" />
-                {notificationsLoading ? "Activando..." : "Activar notificaciones"}
-              </button>
-            )
+              )}
+            </>
           )}
           <button
             onClick={() => {

@@ -114,3 +114,17 @@ export async function checkNotificationStatus(): Promise<{
   }
   return { permission, hasSubscription };
 }
+
+/** Current browser push subscription URL, if any (for targeted test send). */
+export async function getPushSubscriptionEndpoint(): Promise<string | null> {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    return null;
+  }
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const sub = await registration.pushManager.getSubscription();
+    return sub?.endpoint ?? null;
+  } catch {
+    return null;
+  }
+}
