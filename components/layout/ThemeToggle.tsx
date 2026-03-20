@@ -1,21 +1,27 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useLayoutEffect } from "react";
 import { Moon, Sun } from "lucide-react";
+import { THEME_STORAGE_KEY } from "@/lib/theme-storage";
 
 export function ThemeToggle() {
   const [darkMode, setDarkMode] = useState(false);
 
-  useEffect(() => {
-    const isDark =
-      typeof window !== "undefined" &&
-      document.documentElement.classList.contains("dark");
+  useLayoutEffect(() => {
+    const isDark = document.documentElement.classList.contains("dark");
     setDarkMode(isDark);
   }, []);
 
   function toggleTheme() {
-    document.documentElement.classList.toggle("dark");
-    setDarkMode((prev) => !prev);
+    const nextDark = !document.documentElement.classList.contains("dark");
+    if (nextDark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem(THEME_STORAGE_KEY, "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem(THEME_STORAGE_KEY, "light");
+    }
+    setDarkMode(nextDark);
   }
 
   return (
