@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS public.calendars (
   owner_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL DEFAULT 'My Calendar',
   is_personal BOOLEAN NOT NULL DEFAULT true,
+  background_storage_path TEXT,
+  background_overlay_opacity SMALLINT NOT NULL DEFAULT 72 CHECK (background_overlay_opacity >= 0 AND background_overlay_opacity <= 95),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

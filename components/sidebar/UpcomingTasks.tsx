@@ -9,6 +9,7 @@ interface UpcomingTasksProps {
   reminders: Entry[];
   onAddTask: () => void;
   onTaskClick: (date: Date) => void;
+  translucent?: boolean;
 }
 
 export function UpcomingTasks({
@@ -16,6 +17,7 @@ export function UpcomingTasks({
   reminders,
   onAddTask,
   onTaskClick,
+  translucent = false,
 }: UpcomingTasksProps) {
   const todayTasks = tasks.filter((e) => isToday(new Date(e.date)));
   const tomorrowTasks = tasks.filter((e) => isTomorrow(new Date(e.date)));
@@ -47,7 +49,13 @@ export function UpcomingTasks({
   }
 
   return (
-    <aside className="hidden lg:flex w-64 flex-shrink-0 border-l border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex-col">
+    <aside
+      className={`hidden lg:flex w-64 flex-shrink-0 border-l flex-col ${
+        translucent
+          ? "border-slate-200/70 dark:border-slate-700/70 bg-slate-50/75 dark:bg-slate-900/75 backdrop-blur-md"
+          : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50"
+      }`}
+    >
       <div className="p-4 border-b border-slate-200 dark:border-slate-800">
         <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
           <Calendar className="h-4 w-4" />

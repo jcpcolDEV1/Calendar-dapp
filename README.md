@@ -46,6 +46,8 @@ This creates:
 - Row Level Security policies
 - Trigger to auto-create a personal calendar for each new user
 
+**Custom calendar background (optional):** run `supabase/migrations/20250309000000_calendar_background.sql` in the SQL Editor if your project was created before this feature. It adds `background_storage_path` / `background_overlay_opacity` on `calendars` and creates the `calendar_backgrounds` storage bucket with policies.
+
 ### 4. Configure environment
 
 ```bash

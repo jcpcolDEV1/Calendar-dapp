@@ -12,6 +12,8 @@ interface SearchFiltersProps {
   onPriorityChange: (v: Priority | "") => void;
   isCompleted: boolean | null;
   onIsCompletedChange: (v: boolean | null) => void;
+  /** Softer bar over custom calendar background */
+  translucent?: boolean;
 }
 
 export function SearchFilters({
@@ -23,9 +25,16 @@ export function SearchFilters({
   onPriorityChange,
   isCompleted,
   onIsCompletedChange,
+  translucent = false,
 }: SearchFiltersProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2 p-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+    <div
+      className={`flex flex-wrap items-center gap-2 p-3 border-b ${
+        translucent
+          ? "border-slate-200/70 dark:border-slate-700/70 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md"
+          : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+      }`}
+    >
       <div className="relative flex-1 min-w-[200px]">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
         <input

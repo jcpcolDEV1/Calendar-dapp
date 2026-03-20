@@ -110,7 +110,7 @@ export function NotificationPermissionBanner() {
 
   return (
     <div
-      className="shrink-0 border-b border-amber-200/80 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/40 px-4 py-3"
+      className="relative z-20 shrink-0 border-b border-amber-200/80 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/40 px-4 py-3"
       role="region"
       aria-label="Activar notificaciones"
       data-testid="notification-permission-banner"

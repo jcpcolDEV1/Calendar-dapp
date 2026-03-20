@@ -23,6 +23,7 @@ import {
   getUpcomingRemindersAction,
 } from "@/app/actions/data";
 import { SearchFilters } from "./SearchFilters";
+import { getCalendarBackgroundPublicUrl } from "@/lib/calendar-background-url";
 
 interface CalendarDashboardProps {
   calendar: Calendar;
@@ -137,43 +138,82 @@ export function CalendarDashboard({
     setDayEntries([]);
   }, []);
 
+  const backgroundImageUrl = getCalendarBackgroundPublicUrl(
+    calendar.background_storage_path,
+    calendar.updated_at
+  );
+  const hasCustomBackground = Boolean(backgroundImageUrl);
+  const overlayOpacity = Math.min(
+    95,
+    Math.max(0, calendar.background_overlay_opacity ?? 72)
+  );
+
   return (
-    <div className="flex h-screen flex-col bg-slate-50 dark:bg-slate-950">
-      <ServiceWorkerRegistration />
-      <Header
-        currentMonth={currentMonth}
-        onPrevMonth={() => setCurrentMonth((m) => subMonths(m, 1))}
-        onNextMonth={() => setCurrentMonth((m) => addMonths(m, 1))}
-        onToday={() => setCurrentMonth(new Date())}
-        userEmail={userEmail}
-      />
-      <NotificationPermissionBanner />
-
-      <div className="flex flex-1 min-h-0">
-        <main className="flex-1 min-w-0 overflow-auto flex flex-col">
-          <SearchFilters
-            search={search}
-            onSearchChange={setSearch}
-            entryType={filterEntryType}
-            onEntryTypeChange={setFilterEntryType}
-            priority={filterPriority}
-            onPriorityChange={setFilterPriority}
-            isCompleted={filterCompleted}
-            onIsCompletedChange={setFilterCompleted}
+    <div className="relative flex h-screen flex-col">
+      {hasCustomBackground && backgroundImageUrl && (
+        <>
+          <div
+            aria-hidden
+            className="pointer-events-none fixed inset-0 z-0 bg-slate-300 dark:bg-slate-950 bg-cover bg-center bg-no-repeat"
+            style={{ backgroundImage: `url(${backgroundImageUrl})` }}
           />
-          <CalendarGrid
-            currentMonth={currentMonth}
-            entriesByDate={entriesByDate}
-            onDayClick={handleDayClick}
+          <div
+            aria-hidden
+            className="pointer-events-none fixed inset-0 z-[1] bg-white dark:bg-slate-950"
+            style={{ opacity: overlayOpacity / 100 }}
           />
-        </main>
-
-        <UpcomingTasks
-          tasks={upcomingTasks}
-          reminders={reminders}
-          onAddTask={handleAddTask}
-          onTaskClick={handleDayClick}
+        </>
+      )}
+      <div
+        className={`relative z-10 flex h-screen flex-col min-h-0 ${
+          hasCustomBackground ? "" : "bg-slate-50 dark:bg-slate-950"
+        }`}
+      >
+        <ServiceWorkerRegistration />
+        <Header
+          currentMonth={currentMonth}
+          onPrevMonth={() => setCurrentMonth((m) => subMonths(m, 1))}
+          onNextMonth={() => setCurrentMonth((m) => addMonths(m, 1))}
+          onToday={() => setCurrentMonth(new Date())}
+          userEmail={userEmail}
+          translucentHeader={hasCustomBackground}
+          calendarBackground={{
+            calendarId: calendar.id,
+            storagePath: calendar.background_storage_path ?? null,
+            overlayOpacity,
+          }}
         />
+        <NotificationPermissionBanner />
+
+        <div className="flex flex-1 min-h-0">
+          <main className="flex-1 min-w-0 overflow-auto flex flex-col">
+            <SearchFilters
+              search={search}
+              onSearchChange={setSearch}
+              entryType={filterEntryType}
+              onEntryTypeChange={setFilterEntryType}
+              priority={filterPriority}
+              onPriorityChange={setFilterPriority}
+              isCompleted={filterCompleted}
+              onIsCompletedChange={setFilterCompleted}
+              translucent={hasCustomBackground}
+            />
+            <CalendarGrid
+              currentMonth={currentMonth}
+              entriesByDate={entriesByDate}
+              onDayClick={handleDayClick}
+              translucentCells={hasCustomBackground}
+            />
+          </main>
+
+          <UpcomingTasks
+            tasks={upcomingTasks}
+            reminders={reminders}
+            onAddTask={handleAddTask}
+            onTaskClick={handleDayClick}
+            translucent={hasCustomBackground}
+          />
+        </div>
 
         {/* Mobile quick add FAB */}
         <button
@@ -183,18 +223,18 @@ export function CalendarDashboard({
         >
           <span className="text-2xl font-light">+</span>
         </button>
-      </div>
 
-      {selectedDate && (
-        <DayDetailPanel
-          date={selectedDate}
-          calendarId={calendar.id}
-          entries={loadingDay ? [] : dayEntries}
-          openWithNewEntry={openWithNewEntry}
-          onClose={handleClosePanel}
-          onRefresh={() => handleDayClick(selectedDate)}
-        />
-      )}
+        {selectedDate && (
+          <DayDetailPanel
+            date={selectedDate}
+            calendarId={calendar.id}
+            entries={loadingDay ? [] : dayEntries}
+            openWithNewEntry={openWithNewEntry}
+            onClose={handleClosePanel}
+            onRefresh={() => handleDayClick(selectedDate)}
+          />
+        )}
+      </div>
     </div>
   );
 }

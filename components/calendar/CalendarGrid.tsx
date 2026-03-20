@@ -20,12 +20,14 @@ interface CalendarGridProps {
   currentMonth: Date;
   entriesByDate: Record<string, Entry[]>;
   onDayClick: (date: Date) => void;
+  translucentCells?: boolean;
 }
 
 export function CalendarGrid({
   currentMonth,
   entriesByDate,
   onDayClick,
+  translucentCells = false,
 }: CalendarGridProps) {
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -41,7 +43,13 @@ export function CalendarGrid({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-700">
+      <div
+        className={`grid grid-cols-7 border-b ${
+          translucentCells
+            ? "border-slate-200/70 dark:border-slate-700/70 bg-white/75 dark:bg-slate-900/75 backdrop-blur-sm"
+            : "border-slate-200 dark:border-slate-700"
+        }`}
+      >
         {WEEKDAYS.map((d) => (
           <div
             key={d}
@@ -70,6 +78,7 @@ export function CalendarGrid({
               isToday={isCurrentDay}
               isCurrentWeek={isCurrentWeek}
               onClick={() => onDayClick(date)}
+              translucentCells={translucentCells}
             />
           );
         })}

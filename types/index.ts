@@ -7,6 +7,10 @@ export interface Calendar {
   owner_user_id: string;
   name: string;
   is_personal: boolean;
+  /** Path in bucket `calendar_backgrounds`, e.g. `{userId}/calendar-bg.webp` */
+  background_storage_path?: string | null;
+  /** 0–95: scrim opacity over image for readability */
+  background_overlay_opacity?: number | null;
   created_at: string;
   updated_at: string;
 }

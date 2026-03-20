@@ -5,12 +5,18 @@ import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { UserMenu } from "./UserMenu";
 
+import type { CalendarBackgroundMenuProps } from "./UserMenuCalendarBackground";
+
 interface HeaderProps {
   currentMonth: Date;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onToday: () => void;
   userEmail?: string | null;
+  /** When set, shows calendar background controls in the user menu */
+  calendarBackground?: CalendarBackgroundMenuProps | null;
+  /** Glass-style header over custom background */
+  translucentHeader?: boolean;
 }
 
 export function Header({
@@ -19,6 +25,8 @@ export function Header({
   onNextMonth,
   onToday,
   userEmail,
+  calendarBackground = null,
+  translucentHeader = false,
 }: HeaderProps) {
   async function handleSignOut() {
     await signOutAction();
@@ -66,7 +74,11 @@ export function Header({
 
       <div className="flex items-center gap-1">
         <ThemeToggle />
-        <UserMenu userEmail={userEmail} onSignOut={handleSignOut} />
+        <UserMenu
+          userEmail={userEmail}
+          onSignOut={handleSignOut}
+          calendarBackground={calendarBackground ?? undefined}
+        />
       </div>
     </header>
   );
