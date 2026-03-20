@@ -3,8 +3,13 @@
 import { useState } from "react";
 import type { Entry, EntryType, Priority } from "@/types";
 import { ENTRY_TYPES, PRIORITIES, COLOR_OPTIONS } from "@/lib/constants";
-import { REMINDER_OPTIONS } from "@/lib/reminder-utils";
+import {
+  offsetMinutesFromReminderWallTime,
+  reminderWallFromOffset,
+} from "@/lib/reminder-utils";
+import { ReminderDateTimeFields } from "@/components/entries/ReminderDateTimeFields";
 import { getClientIanaTimeZone } from "@/lib/client-timezone";
+import { toast } from "sonner";
 
 interface EntryFormProps {
   date: string;
@@ -43,9 +48,17 @@ export function EntryForm({
   const [time, setTime] = useState(
     entry?.time ? entry.time.slice(0, 5) : ""
   );
-  const [reminderOffset, setReminderOffset] = useState<number | null>(
-    entry?.reminder_offset_minutes ?? null
-  );
+  const initialWall = (() => {
+    const tz = entry?.time_zone?.trim() || getClientIanaTimeZone();
+    const evD = entry?.date ?? date;
+    const evT = entry?.time ? entry.time.slice(0, 5) : "";
+    const off = entry?.reminder_offset_minutes;
+    if (!off || off <= 0 || evT.length < 5) return { d: "", t: "" };
+    const w = reminderWallFromOffset(evD, evT, off, tz);
+    return { d: w?.date ?? "", t: w?.time ?? "" };
+  })();
+  const [reminderDate, setReminderDate] = useState(initialWall.d);
+  const [reminderTime, setReminderTime] = useState(initialWall.t);
   const [priority, setPriority] = useState<Priority>(entry?.priority ?? "medium");
   const [label, setLabel] = useState(entry?.label ?? "");
   const [color, setColor] = useState(entry?.color ?? "");
@@ -57,17 +70,36 @@ export function EntryForm({
     if (!title.trim()) return;
     setLoading(true);
     try {
+      const tz = getClientIanaTimeZone();
+      const timeVal = time?.trim() || null;
+      let reminder_offset_minutes: number | null = null;
+      if (timeVal) {
+        if (!reminderDate.trim() || !reminderTime.trim()) {
+          reminder_offset_minutes = null;
+        } else {
+          const r = offsetMinutesFromReminderWallTime(
+            formDate,
+            timeVal,
+            reminderDate,
+            reminderTime,
+            tz
+          );
+          if (!r.ok) {
+            toast.error(r.error);
+            return;
+          }
+          reminder_offset_minutes = r.minutes;
+        }
+      }
+
       await onSave({
         title: title.trim(),
         description: description.trim(),
         entry_type: entryType,
         date: formDate,
         time: time || null,
-        reminder_offset_minutes:
-          time && reminderOffset != null && reminderOffset > 0
-            ? reminderOffset
-            : null,
-        time_zone: getClientIanaTimeZone(),
+        reminder_offset_minutes,
+        time_zone: tz,
         priority,
         label: label.trim(),
         color: color || "",
@@ -155,26 +187,17 @@ export function EntryForm({
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
           Reminder (optional)
         </label>
-        {time ? (
-          <select
-            value={reminderOffset ?? ""}
-            onChange={(e) => {
-              const v = e.target.value;
-              setReminderOffset(v ? Number(v) : null);
-            }}
-            className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-          >
-            {REMINDER_OPTIONS.map((opt) => (
-              <option key={opt.value ?? "none"} value={opt.value ?? ""}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Los recordatorios requieren hora
-          </p>
-        )}
+        <ReminderDateTimeFields
+          hasTime={Boolean(time?.trim())}
+          eventDate={formDate}
+          eventTime={time.trim().slice(0, 5)}
+          timeZone={getClientIanaTimeZone()}
+          reminderDate={reminderDate}
+          reminderTime={reminderTime}
+          onReminderDateChange={setReminderDate}
+          onReminderTimeChange={setReminderTime}
+          zoneHint={getClientIanaTimeZone()}
+        />
       </div>
 
       <div>

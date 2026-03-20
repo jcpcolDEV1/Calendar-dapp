@@ -1,15 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { flushSync } from "react-dom";
 import { format } from "date-fns";
 import { Bell, Check, FileText, Pencil, Trash2 } from "lucide-react";
 import type { Entry } from "@/types";
 import { updateEntryAction, deleteEntryAction } from "@/app/actions/entries";
 import { formatEntryDisplay } from "@/lib/format-entry-display";
 import {
-  REMINDER_OPTIONS,
   formatReminderOffset,
+  offsetMinutesFromReminderWallTime,
+  reminderWallFromOffset,
 } from "@/lib/reminder-utils";
+import { ReminderDateTimeFields } from "@/components/entries/ReminderDateTimeFields";
 import { getClientIanaTimeZone } from "@/lib/client-timezone";
 import { toast } from "sonner";
 
@@ -30,15 +33,25 @@ interface EntryCardProps {
   onRefresh: () => void;
 }
 
+type ReminderSaveOverride = { kind: "offset"; minutes: number };
+
 export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(entry.title);
   const [editTime, setEditTime] = useState(toHHMM(entry.time));
   const [editEndTime, setEditEndTime] = useState(toHHMM(entry.end_time ?? null));
-  const [editReminderOffset, setEditReminderOffset] = useState<number | null>(
-    entry.reminder_offset_minutes ?? null
-  );
+  const initialWall = (() => {
+    const tz = entry.time_zone?.trim() || getClientIanaTimeZone();
+    const t = toHHMM(entry.time);
+    const off = entry.reminder_offset_minutes;
+    if (!off || off <= 0 || t.length < 5) return { d: "", t: "" };
+    const w = reminderWallFromOffset(entry.date, t, off, tz);
+    return { d: w?.date ?? "", t: w?.time ?? "" };
+  })();
+  const [editRemDate, setEditRemDate] = useState(initialWall.d);
+  const [editRemTime, setEditRemTime] = useState(initialWall.t);
   const [timeError, setTimeError] = useState<string | null>(null);
+  const [reminderError, setReminderError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -46,12 +59,31 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
       setEditValue(entry.title);
       setEditTime(toHHMM(entry.time));
       setEditEndTime(toHHMM(entry.end_time ?? null));
-      setEditReminderOffset(entry.reminder_offset_minutes ?? null);
+      const tz = entry.time_zone?.trim() || getClientIanaTimeZone();
+      const tt = toHHMM(entry.time);
+      const off = entry.reminder_offset_minutes;
+      if (off && off > 0 && tt.length >= 5) {
+        const w = reminderWallFromOffset(entry.date, tt, off, tz);
+        setEditRemDate(w?.date ?? "");
+        setEditRemTime(w?.time ?? "");
+      } else {
+        setEditRemDate("");
+        setEditRemTime("");
+      }
       setTimeError(null);
+      setReminderError(null);
       inputRef.current?.focus();
       inputRef.current?.select();
     }
-  }, [isEditing, entry.title, entry.time, entry.end_time, entry.reminder_offset_minutes]);
+  }, [
+    isEditing,
+    entry.title,
+    entry.time,
+    entry.end_time,
+    entry.reminder_offset_minutes,
+    entry.date,
+    entry.time_zone,
+  ]);
 
   async function handleToggleComplete() {
     try {
@@ -74,23 +106,53 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
     }
   }
 
-  async function handleInlineSave() {
+  async function handleInlineSave(override?: ReminderSaveOverride) {
     const trimmed = editValue.trim();
     if (!trimmed) {
       setIsEditing(false);
       setEditValue(entry.title);
       setEditTime(toHHMM(entry.time));
       setEditEndTime(toHHMM(entry.end_time ?? null));
-      setEditReminderOffset(entry.reminder_offset_minutes ?? null);
+      const tz = entry.time_zone?.trim() || getClientIanaTimeZone();
+      const tt = toHHMM(entry.time);
+      const off = entry.reminder_offset_minutes;
+      if (off && off > 0 && tt.length >= 5) {
+        const w = reminderWallFromOffset(entry.date, tt, off, tz);
+        setEditRemDate(w?.date ?? "");
+        setEditRemTime(w?.time ?? "");
+      } else {
+        setEditRemDate("");
+        setEditRemTime("");
+      }
       setTimeError(null);
+      setReminderError(null);
       return;
     }
     const newTime = editTime.trim() || null;
     const newEndTime = editEndTime.trim() || null;
-    const newReminderOffset =
-      newTime && editReminderOffset != null && editReminderOffset > 0
-        ? editReminderOffset
-        : null;
+    const tz = entry.time_zone?.trim() || getClientIanaTimeZone();
+
+    let newReminderOffset: number | null;
+    if (override?.kind === "offset") {
+      newReminderOffset =
+        newTime && override.minutes > 0 ? override.minutes : null;
+    } else if (!newTime || !editRemDate.trim() || !editRemTime.trim()) {
+      newReminderOffset = null;
+    } else {
+      const r = offsetMinutesFromReminderWallTime(
+        entry.date,
+        newTime,
+        editRemDate,
+        editRemTime,
+        tz
+      );
+      if (!r.ok) {
+        setReminderError(r.error);
+        return;
+      }
+      setReminderError(null);
+      newReminderOffset = r.minutes;
+    }
 
     if (newEndTime && newTime && isEndTimeInvalid(newTime, newEndTime)) {
       setTimeError("La hora de fin debe ser posterior a la de inicio");
@@ -129,8 +191,19 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
     setEditValue(entry.title);
     setEditTime(toHHMM(entry.time));
     setEditEndTime(toHHMM(entry.end_time ?? null));
-    setEditReminderOffset(entry.reminder_offset_minutes ?? null);
+    const tz = entry.time_zone?.trim() || getClientIanaTimeZone();
+    const tt = toHHMM(entry.time);
+    const off = entry.reminder_offset_minutes;
+    if (off && off > 0 && tt.length >= 5) {
+      const w = reminderWallFromOffset(entry.date, tt, off, tz);
+      setEditRemDate(w?.date ?? "");
+      setEditRemTime(w?.time ?? "");
+    } else {
+      setEditRemDate("");
+      setEditRemTime("");
+    }
     setTimeError(null);
+    setReminderError(null);
   }
 
   const borderColor = entry.color || "transparent";
@@ -189,7 +262,7 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
                   handleInlineCancel();
                 }
               }}
-              onBlur={handleInlineSave}
+              onBlur={() => void handleInlineSave()}
               className="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium"
               data-testid="entry-card-inline-input"
             />
@@ -212,7 +285,7 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
                       handleInlineCancel();
                     }
                   }}
-                  onBlur={handleInlineSave}
+                  onBlur={() => void handleInlineSave()}
                   className={`px-2 py-1 rounded border text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     timeError
                       ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/20"
@@ -238,7 +311,7 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
                       handleInlineCancel();
                     }
                   }}
-                  onBlur={handleInlineSave}
+                  onBlur={() => void handleInlineSave()}
                   className={`px-2 py-1 rounded border text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     timeError
                       ? "border-red-500 dark:border-red-500 bg-red-50 dark:bg-red-900/20"
@@ -255,41 +328,70 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
                   {timeError}
                 </p>
               )}
-              {editTime ? (
-                <select
-                  value={editReminderOffset ?? ""}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setEditReminderOffset(v ? Number(v) : null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleInlineSave();
-                    }
-                    if (e.key === "Escape") {
-                      e.preventDefault();
-                      handleInlineCancel();
-                    }
-                  }}
-                  onBlur={handleInlineSave}
-                  className="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  data-testid="entry-card-reminder-select"
+              {reminderError && (
+                <p
+                  className="text-xs text-red-600 dark:text-red-400"
+                  data-testid="entry-card-reminder-error"
                 >
-                  {REMINDER_OPTIONS.map((opt) => (
-                    <option
-                      key={opt.value ?? "none"}
-                      value={opt.value ?? ""}
-                    >
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Los recordatorios requieren hora
+                  {reminderError}
                 </p>
               )}
+              <ReminderDateTimeFields
+                compact
+                hasTime={Boolean(editTime?.trim())}
+                eventDate={entry.date}
+                eventTime={editTime.trim().slice(0, 5)}
+                timeZone={entry.time_zone?.trim() || getClientIanaTimeZone()}
+                reminderDate={editRemDate}
+                reminderTime={editRemTime}
+                onReminderDateChange={(v) => {
+                  setEditRemDate(v);
+                  setReminderError(null);
+                }}
+                onReminderTimeChange={(v) => {
+                  setEditRemTime(v);
+                  setReminderError(null);
+                }}
+                onFieldKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void handleInlineSave();
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    handleInlineCancel();
+                  }
+                }}
+                onFieldBlur={() => void handleInlineSave()}
+                onPresetMinutes={(mins) => {
+                  const z = entry.time_zone?.trim() || getClientIanaTimeZone();
+                  const w = reminderWallFromOffset(
+                    entry.date,
+                    editTime,
+                    mins,
+                    z
+                  );
+                  if (!w) return;
+                  flushSync(() => {
+                    setEditRemDate(w.date);
+                    setEditRemTime(w.time);
+                    setReminderError(null);
+                  });
+                  void handleInlineSave({ kind: "offset", minutes: mins });
+                }}
+                onClearReminder={() => {
+                  flushSync(() => {
+                    setEditRemDate("");
+                    setEditRemTime("");
+                    setReminderError(null);
+                  });
+                  void handleInlineSave({ kind: "offset", minutes: 0 });
+                }}
+                zoneHint={
+                  entry.time_zone?.trim() || getClientIanaTimeZone()
+                }
+                data-testid="entry-card-reminder-datetime"
+              />
             </div>
           </div>
         ) : (
