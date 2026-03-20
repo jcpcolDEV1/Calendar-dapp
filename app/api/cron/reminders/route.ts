@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
   // First: backfill reminder_at for entries that have time + offset but reminder_at null
   const { data: toBackfill } = await supabase
     .from("entries")
-    .select("id, date, time, reminder_offset_minutes")
+    .select("id, date, time, reminder_offset_minutes, time_zone")
     .is("reminder_at", null)
     .not("reminder_offset_minutes", "is", null)
     .not("time", "is", null);
@@ -46,7 +46,12 @@ export async function GET(request: NextRequest) {
       if (offset == null || offset <= 0) continue;
       const timeStr = String(row.time).trim().slice(0, 5);
       if (timeStr.length < 5) continue;
-      const reminder_at = computeReminderAt(row.date, timeStr, offset);
+      const reminder_at = computeReminderAt(
+        row.date,
+        timeStr,
+        offset,
+        row.time_zone
+      );
       if (reminder_at) {
         await supabase
           .from("entries")

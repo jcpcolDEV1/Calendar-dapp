@@ -112,6 +112,14 @@ types/                     # TypeScript types
 supabase/schema.sql        # Database schema
 ```
 
+## Reminder timezones
+
+`entries.time_zone` stores the IANA timezone from the browser (e.g. `Europe/Madrid`) when you save an entry. `reminder_at` is computed in UTC so push reminders match the user’s local wall clock.
+
+- **New databases**: `supabase/schema.sql` includes `time_zone`.
+- **Existing Supabase projects**: run `supabase/migrations/20250320000000_add_entries_time_zone.sql` in the SQL Editor.
+- Rows with `time_zone` NULL (legacy) still use **UTC** when backfilling `reminder_at` (same as the previous server-only `Date` behavior). Re-save an entry from the app to store your timezone.
+
 ## Architecture
 
 - **calendars**: One per user (personal); structure supports future shared calendars

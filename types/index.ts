@@ -24,6 +24,8 @@ export interface Entry {
   reminder_at: string | null;
   reminder_offset_minutes: number | null;
   reminder_sent_at: string | null;
+  /** IANA timezone used to interpret date+time for reminders (e.g. Europe/Madrid) */
+  time_zone?: string | null;
   priority: Priority;
   label: string;
   color: string;
@@ -45,6 +47,7 @@ export interface EntryInsert {
   reminder_at?: string | null;
   reminder_offset_minutes?: number | null;
   reminder_sent_at?: string | null;
+  time_zone?: string | null;
   priority?: Priority;
   label?: string;
   color?: string;
@@ -62,6 +65,7 @@ export interface EntryUpdate {
   reminder_at?: string | null;
   reminder_offset_minutes?: number | null;
   reminder_sent_at?: string | null;
+  time_zone?: string | null;
   priority?: Priority;
   label?: string;
   color?: string;

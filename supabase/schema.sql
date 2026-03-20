@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS public.entries (
   reminder_at TIMESTAMPTZ,
   reminder_offset_minutes INTEGER,
   reminder_sent_at TIMESTAMPTZ,
+  time_zone TEXT,
   priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
   label TEXT DEFAULT '',
   color TEXT DEFAULT '',

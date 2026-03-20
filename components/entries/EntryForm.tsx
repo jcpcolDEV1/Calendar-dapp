@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Entry, EntryType, Priority } from "@/types";
 import { ENTRY_TYPES, PRIORITIES, COLOR_OPTIONS } from "@/lib/constants";
 import { REMINDER_OPTIONS } from "@/lib/reminder-utils";
+import { getClientIanaTimeZone } from "@/lib/client-timezone";
 
 interface EntryFormProps {
   date: string;
@@ -20,6 +21,8 @@ export interface EntryFormData {
   date: string;
   time: string | null;
   reminder_offset_minutes: number | null;
+  /** IANA timezone from browser for correct reminder_at */
+  time_zone: string;
   priority: Priority;
   label: string;
   color: string;
@@ -64,6 +67,7 @@ export function EntryForm({
           time && reminderOffset != null && reminderOffset > 0
             ? reminderOffset
             : null,
+        time_zone: getClientIanaTimeZone(),
         priority,
         label: label.trim(),
         color: color || "",

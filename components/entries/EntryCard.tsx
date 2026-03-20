@@ -10,6 +10,7 @@ import {
   REMINDER_OPTIONS,
   formatReminderOffset,
 } from "@/lib/reminder-utils";
+import { getClientIanaTimeZone } from "@/lib/client-timezone";
 import { toast } from "sonner";
 
 function toHHMM(t: string | null): string {
@@ -113,6 +114,7 @@ export function EntryCard({ entry, onEdit, onRefresh }: EntryCardProps) {
         end_time: newEndTime,
         reminder_offset_minutes: newReminderOffset,
         date: entry.date,
+        time_zone: entry.time_zone?.trim() || getClientIanaTimeZone(),
       });
       toast.success("Tarea actualizada");
       setIsEditing(false);
